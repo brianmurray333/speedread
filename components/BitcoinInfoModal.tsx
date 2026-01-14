@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import QRCode from 'qrcode'
 
 // WebLN type declarations
@@ -38,8 +39,10 @@ export default function BitcoinInfoModal({ isOpen, onClose }: BitcoinInfoModalPr
   const [hasWebLN, setHasWebLN] = useState(false)
   const [webLNPaying, setWebLNPaying] = useState(false)
   const [paid, setPaid] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     setHasWebLN(typeof window !== 'undefined' && !!window.webln)
   }, [])
 
@@ -145,18 +148,18 @@ export default function BitcoinInfoModal({ isOpen, onClose }: BitcoinInfoModalPr
     }
   }
 
-  if (!isOpen) return null
+  if (!isOpen || !mounted) return null
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+  const modalContent = (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm"
         onClick={onClose}
       />
       
       {/* Modal */}
-      <div className="relative bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div className="relative bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-4 sm:p-6 max-w-lg w-full shadow-2xl max-h-[85vh] overflow-y-auto">
         {/* Close button */}
         <button
           onClick={onClose}
@@ -434,4 +437,6 @@ export default function BitcoinInfoModal({ isOpen, onClose }: BitcoinInfoModalPr
       </div>
     </div>
   )
+
+  return createPortal(modalContent, document.body)
 }
