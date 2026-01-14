@@ -118,14 +118,12 @@ export default function SpeedReader({
           setIsPlaying(prev => !prev)
           break
         case 'ArrowRight':
-          if (!isPlaying) {
-            setCurrentIndex(prev => Math.min(prev + 1, words.length - 1))
-          }
+          setIsPlaying(false)
+          setCurrentIndex(prev => Math.min(prev + 1, words.length - 1))
           break
         case 'ArrowLeft':
-          if (!isPlaying) {
-            setCurrentIndex(prev => Math.max(prev - 1, 0))
-          }
+          setIsPlaying(false)
+          setCurrentIndex(prev => Math.max(prev - 1, 0))
           break
         case 'ArrowUp':
           setWpm(prev => Math.min(prev + 50, 1000))

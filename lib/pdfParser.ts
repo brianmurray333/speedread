@@ -12,6 +12,20 @@ export function parseTextToWords(text: string): string[] {
       if (!/[a-zA-Z0-9]/.test(word)) return false
       return true
     })
+    .flatMap(word => {
+      // Split hyphenated words into separate words
+      // e.g., "hyper-parameters" becomes ["hyper-", "parameters"]
+      if (word.includes('-') && word.length > 1) {
+        const parts = word.split('-')
+        // Only split if we have multiple meaningful parts
+        if (parts.length > 1 && parts.every(p => p.length > 0)) {
+          return parts.map((part, i) => 
+            i < parts.length - 1 ? part + '-' : part
+          )
+        }
+      }
+      return [word]
+    })
 }
 
 export function calculateORP(word: string): number {
