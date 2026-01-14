@@ -128,21 +128,13 @@ export default function SpeedReader({
     const after = currentWord.slice(orpIndex + 1)
 
     return (
-      <div className="flex items-baseline justify-center">
-        {/* Before ORP - right aligned, fixed width */}
-        <span 
-          className="text-[color:var(--foreground)] text-right"
-          style={{ width: '45%', display: 'inline-block' }}
-        >
+      <div className="w-full flex justify-center">
+        {/* Three-column layout: before | ORP | after */}
+        <span className="text-[color:var(--foreground)] text-right inline-block" style={{ minWidth: '40%' }}>
           {before}
         </span>
-        {/* ORP - fixed center position */}
         <span className="text-[color:var(--accent)] font-semibold">{orp}</span>
-        {/* After ORP - left aligned, fixed width */}
-        <span 
-          className="text-[color:var(--foreground)] text-left"
-          style={{ width: '45%', display: 'inline-block' }}
-        >
+        <span className="text-[color:var(--foreground)] text-left inline-block" style={{ minWidth: '40%' }}>
           {after}
         </span>
       </div>

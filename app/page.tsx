@@ -162,16 +162,16 @@ export default function Home() {
           {/* Demo */}
           <div className="mt-16 text-center">
             <h3 className="text-2xl font-semibold mb-6">See the ORP in action</h3>
-            <div className="inline-block bg-[color:var(--surface)] rounded-xl p-8 border border-[color:var(--border)] min-w-[320px]">
+            <div className="inline-block bg-[color:var(--surface)] rounded-xl p-8 border border-[color:var(--border)] min-w-[400px]">
               <div 
-                className="text-5xl sm:text-6xl font-normal tracking-wide flex items-baseline justify-center" 
+                className="text-5xl sm:text-6xl font-normal tracking-wide flex justify-center" 
                 style={{ fontFamily: 'system-ui, Arial, sans-serif' }}
               >
-                <span className="text-right" style={{ width: '45%' }}>Sp</span>
+                <span className="text-right inline-block" style={{ minWidth: '40%' }}>Sp</span>
                 <span className="text-[color:var(--accent)] font-semibold">e</span>
-                <span className="text-left" style={{ width: '45%' }}>edRead</span>
+                <span className="text-left inline-block" style={{ minWidth: '40%' }}>edRead</span>
               </div>
-              <p className="text-[color:var(--muted)] mt-4 text-sm">
+              <p className="text-[color:var(--muted)] mt-6 text-sm">
                 The red letter stays fixed at the center
               </p>
             </div>
