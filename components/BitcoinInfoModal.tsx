@@ -159,7 +159,7 @@ export default function BitcoinInfoModal({ isOpen, onClose }: BitcoinInfoModalPr
       />
       
       {/* Modal */}
-      <div className="relative bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-4 sm:p-6 max-w-lg w-full shadow-2xl max-h-[85vh] overflow-y-auto">
+      <div className="relative bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-4 sm:p-6 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
         {/* Close button */}
         <button
           onClick={onClose}
@@ -209,16 +209,16 @@ export default function BitcoinInfoModal({ isOpen, onClose }: BitcoinInfoModalPr
               Back
             </button>
 
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-[#F7931A]/20 flex items-center justify-center">
-                <div className="w-12 h-12 rounded-full bg-[#F7931A] flex items-center justify-center">
-                  <svg className="w-7 h-7" viewBox="0 0 64 64" fill="none">
+            <div className="text-center mb-4">
+              <div className="w-14 h-14 mx-auto mb-2 rounded-full bg-[#F7931A]/20 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-[#F7931A] flex items-center justify-center">
+                  <svg className="w-6 h-6" viewBox="0 0 64 64" fill="none">
                     <path fill="#ffffff" d="M46.11 27.44c.63-4.23-2.6-6.5-7.03-8.02l1.44-5.76-3.51-.88-1.4 5.61c-.92-.23-1.87-.45-2.81-.66l1.41-5.64-3.51-.88-1.44 5.75c-.76-.17-1.5-.34-2.23-.52l-4.84-1.2-.93 3.75s2.6.6 2.54.63c1.42.36 1.67 1.3 1.63 2.04l-1.64 6.56c.1.03.23.07.37.12l-.38-.09-2.3 9.2c-.17.43-.62 1.08-1.62.83.04.05-2.54-.63-2.54-.63l-1.74 4.02 4.57 1.14c.85.21 1.68.44 2.5.65l-1.45 5.84 3.5.88 1.44-5.77c.96.26 1.89.5 2.8.73l-1.43 5.74 3.51.88 1.45-5.83c5.99 1.13 10.49.68 12.38-4.74 1.53-4.36-.08-6.88-3.23-8.52 2.3-.53 4.03-2.04 4.49-5.15zm-8.03 11.26c-1.09 4.36-8.44 2-10.83 1.41l1.93-7.74c2.39.6 10.02 1.78 8.9 6.33zm1.08-11.33c-.99 3.97-7.1 1.95-9.09 1.46l1.75-7.02c1.99.5 8.36 1.42 7.34 5.56z"/>
                   </svg>
                 </div>
               </div>
-              <h2 className="text-xl font-bold mb-1">Tip SpeedRead</h2>
-              <p className="text-[color:var(--muted)] text-sm">
+              <h2 className="text-lg font-bold mb-0.5">Tip SpeedRead</h2>
+              <p className="text-[color:var(--muted)] text-xs">
                 Support the project with a Lightning tip
               </p>
             </div>
@@ -281,10 +281,10 @@ export default function BitcoinInfoModal({ isOpen, onClose }: BitcoinInfoModalPr
               </div>
             ) : (
               // Invoice display
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="text-center">
-                  <span className="text-2xl font-bold text-[#F7931A]">{invoice.amount}</span>
-                  <span className="text-[color:var(--muted)] ml-2">sats</span>
+                  <span className="text-xl font-bold text-[#F7931A]">{invoice.amount}</span>
+                  <span className="text-[color:var(--muted)] ml-1 text-sm">sats</span>
                 </div>
 
                 {hasWebLN && (
@@ -305,7 +305,7 @@ export default function BitcoinInfoModal({ isOpen, onClose }: BitcoinInfoModalPr
                             <circle cx="32" cy="32" r="32" fill="currentColor" fillOpacity="0.2"/>
                             <path fill="currentColor" d="M46.11 27.44c.63-4.23-2.6-6.5-7.03-8.02l1.44-5.76-3.51-.88-1.4 5.61c-.92-.23-1.87-.45-2.81-.66l1.41-5.64-3.51-.88-1.44 5.75c-.76-.17-1.5-.34-2.23-.52l-4.84-1.2-.93 3.75s2.6.6 2.54.63c1.42.36 1.67 1.3 1.63 2.04l-1.64 6.56c.1.03.23.07.37.12l-.38-.09-2.3 9.2c-.17.43-.62 1.08-1.62.83.04.05-2.54-.63-2.54-.63l-1.74 4.02 4.57 1.14c.85.21 1.68.44 2.5.65l-1.45 5.84 3.5.88 1.44-5.77c.96.26 1.89.5 2.8.73l-1.43 5.74 3.51.88 1.45-5.83c5.99 1.13 10.49.68 12.38-4.74 1.53-4.36-.08-6.88-3.23-8.52 2.3-.53 4.03-2.04 4.49-5.15zm-8.03 11.26c-1.09 4.36-8.44 2-10.83 1.41l1.93-7.74c2.39.6 10.02 1.78 8.9 6.33zm1.08-11.33c-.99 3.97-7.1 1.95-9.09 1.46l1.75-7.02c1.99.5 8.36 1.42 7.34 5.56z"/>
                           </svg>
-                          Pay with Bitcoin
+                          Pay with Alby / WebLN
                         </>
                       )}
                     </button>
@@ -319,8 +319,8 @@ export default function BitcoinInfoModal({ isOpen, onClose }: BitcoinInfoModalPr
 
                 {qrCodeUrl && (
                   <div className="flex justify-center">
-                    <div className="bg-white p-3 rounded-xl">
-                      <img src={qrCodeUrl} alt="Lightning Invoice QR" className="w-40 h-40" />
+                    <div className="bg-white p-2 rounded-xl">
+                      <img src={qrCodeUrl} alt="Lightning Invoice QR" className="w-36 h-36" />
                     </div>
                   </div>
                 )}
