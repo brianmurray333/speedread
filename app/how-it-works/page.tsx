@@ -135,9 +135,12 @@ export default function HowItWorksPage() {
         </Link>
         <Link 
           href="/"
-          className="text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors text-sm"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-[color:var(--surface)] border border-[color:var(--border)] hover:bg-[color:var(--surface-hover)] transition-colors"
+          aria-label="Close"
         >
-          ← Back
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </Link>
       </header>
 
