@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { extractTextFromPDF, parseTextToWords } from '@/lib/pdfParser'
 
 interface PDFUploaderProps {
-  onTextExtracted: (words: string[], title: string) => void
+  onTextExtracted: (words: string[], title: string, rawText?: string) => void
 }
 
 export default function PDFUploader({ onTextExtracted }: PDFUploaderProps) {
@@ -33,7 +33,7 @@ export default function PDFUploader({ onTextExtracted }: PDFUploaderProps) {
       }
 
       const title = file.name.replace('.pdf', '')
-      onTextExtracted(words, title)
+      onTextExtracted(words, title, text)
     } catch (e) {
       console.error('PDF parsing error:', e)
       setError('Error reading PDF. Please try another file.')

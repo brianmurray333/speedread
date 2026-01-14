@@ -4,7 +4,11 @@ import { useState, useEffect } from 'react'
 import { supabase, Document } from '@/lib/supabase'
 import Header from '@/components/Header'
 import SpeedReader from '@/components/SpeedReader'
+import PaymentModal from '@/components/PaymentModal'
 import { parseTextToWords } from '@/lib/pdfParser'
+
+// Store paid document macaroons in memory (would use localStorage in production)
+const paidDocuments = new Map<string, string>()
 
 export default function LibraryPage() {
   const [documents, setDocuments] = useState<Document[]>([])
@@ -12,9 +16,23 @@ export default function LibraryPage() {
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
   const [words, setWords] = useState<string[]>([])
   const [isReading, setIsReading] = useState(false)
+  
+  // Payment state
+  const [paymentDoc, setPaymentDoc] = useState<Document | null>(null)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
 
   useEffect(() => {
     fetchDocuments()
+    // Load paid documents from localStorage
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('speedread_paid_docs')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        Object.entries(parsed).forEach(([id, macaroon]) => {
+          paidDocuments.set(id, macaroon as string)
+        })
+      }
+    }
   }, [])
 
   const fetchDocuments = async () => {
@@ -45,12 +63,77 @@ export default function LibraryPage() {
     }
   }
 
-  const handleReadDocument = (doc: Document) => {
-    const docWords = parseTextToWords(doc.text_content)
-    setWords(docWords)
-    setSelectedDoc(doc)
-    setIsReading(true)
+  const handleReadDocument = async (doc: Document) => {
+    // Check if document requires payment
+    if (doc.price_sats && doc.price_sats > 0) {
+      // Check if already paid
+      if (paidDocuments.has(doc.id)) {
+        // Fetch content with macaroon
+        await fetchPaidContent(doc, paidDocuments.get(doc.id)!)
+      } else {
+        // Show payment modal
+        setPaymentDoc(doc)
+        setShowPaymentModal(true)
+      }
+    } else {
+      // Free document - read directly
+      const docWords = parseTextToWords(doc.text_content)
+      setWords(docWords)
+      setSelectedDoc(doc)
+      setIsReading(true)
+    }
   }
+
+  const fetchPaidContent = async (doc: Document, macaroon: string) => {
+    try {
+      const response = await fetch(
+        `/api/documents/${doc.id}/content?macaroon=${encodeURIComponent(macaroon)}`
+      )
+      
+      if (response.ok) {
+        const data = await response.json()
+        const docWords = parseTextToWords(data.textContent)
+        setWords(docWords)
+        setSelectedDoc(doc)
+        setIsReading(true)
+      } else if (response.status === 402) {
+        // Payment expired or invalid, need to pay again
+        paidDocuments.delete(doc.id)
+        savePaidDocuments()
+        setPaymentDoc(doc)
+        setShowPaymentModal(true)
+      } else {
+        console.error('Failed to fetch paid content')
+      }
+    } catch (e) {
+      console.error('Error fetching paid content:', e)
+    }
+  }
+
+  const savePaidDocuments = () => {
+    if (typeof window !== 'undefined') {
+      const obj: Record<string, string> = {}
+      paidDocuments.forEach((macaroon, id) => {
+        obj[id] = macaroon
+      })
+      localStorage.setItem('speedread_paid_docs', JSON.stringify(obj))
+    }
+  }
+
+  const handlePaymentComplete = async (macaroon: string) => {
+    if (!paymentDoc) return
+
+    // Store the macaroon
+    paidDocuments.set(paymentDoc.id, macaroon)
+    savePaidDocuments()
+
+    // Close modal and fetch content
+    setShowPaymentModal(false)
+    await fetchPaidContent(paymentDoc, macaroon)
+    setPaymentDoc(null)
+  }
+
+  const isPaid = (doc: Document) => paidDocuments.has(doc.id)
 
   if (isReading && words.length > 0) {
     return (
@@ -108,8 +191,29 @@ export default function LibraryPage() {
                 <button
                   key={doc.id}
                   onClick={() => handleReadDocument(doc)}
-                  className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-4 text-left hover:bg-[color:var(--surface-hover)] hover:border-[color:var(--accent)] transition-all flex items-center gap-4"
+                  className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-4 text-left hover:bg-[color:var(--surface-hover)] hover:border-[color:var(--accent)] transition-all flex items-center gap-4 relative"
                 >
+                  {/* Paid badge */}
+                  {doc.price_sats > 0 && (
+                    <div className="absolute top-2 right-2">
+                      {isPaid(doc) ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Paid
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[color:var(--accent)]/10 text-[color:var(--accent)] border border-[color:var(--accent)]/20">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                          {doc.price_sats} sats
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  
                   <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[color:var(--accent)]/10 flex items-center justify-center">
                     <svg 
                       className="w-5 h-5 text-[color:var(--accent)]" 
@@ -121,12 +225,15 @@ export default function LibraryPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                     </svg>
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 pr-16">
                     <h3 className="font-semibold truncate hover:text-[color:var(--accent)] transition-colors">
                       {doc.title}
                     </h3>
                     <p className="text-[color:var(--muted)] text-sm">
                       {doc.word_count.toLocaleString()} words
+                      {doc.creator_name && (
+                        <span className="ml-2">• by {doc.creator_name}</span>
+                      )}
                     </p>
                   </div>
                 </button>
@@ -135,6 +242,18 @@ export default function LibraryPage() {
           )}
         </div>
       </main>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => {
+          setShowPaymentModal(false)
+          setPaymentDoc(null)
+        }}
+        onPaymentComplete={handlePaymentComplete}
+        documentId={paymentDoc?.id || ''}
+        documentTitle={paymentDoc?.title || ''}
+      />
     </div>
   )
 }

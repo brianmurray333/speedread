@@ -5,13 +5,17 @@ import Header from '@/components/Header'
 import PDFUploader from '@/components/PDFUploader'
 import SpeedReader from '@/components/SpeedReader'
 import IntroReader from '@/components/IntroReader'
+import PublishModal from '@/components/PublishModal'
 import Link from 'next/link'
 
 export default function Home() {
   const [words, setWords] = useState<string[]>([])
   const [title, setTitle] = useState<string>('')
+  const [textContent, setTextContent] = useState<string>('')
   const [isReading, setIsReading] = useState(false)
   const [showIntro, setShowIntro] = useState<boolean | null>(null)
+  const [showUploadOptions, setShowUploadOptions] = useState(false)
+  const [showPublishModal, setShowPublishModal] = useState(false)
 
   // Check if user has seen the intro before
   useEffect(() => {
@@ -24,10 +28,26 @@ export default function Home() {
     setShowIntro(false)
   }
 
-  const handleTextExtracted = (extractedWords: string[], docTitle: string) => {
+  const handleTextExtracted = (extractedWords: string[], docTitle: string, rawText?: string) => {
     setWords(extractedWords)
     setTitle(docTitle)
+    setTextContent(rawText || extractedWords.join(' '))
+    setShowUploadOptions(true)
+  }
+
+  const handleStartReading = () => {
+    setShowUploadOptions(false)
     setIsReading(true)
+  }
+
+  const handlePublished = () => {
+    setShowPublishModal(false)
+    setShowUploadOptions(false)
+    setWords([])
+    setTitle('')
+    setTextContent('')
+    // Could show a success message or redirect to library
+    alert('Published successfully! Your document is now in the library.')
   }
 
   // Show nothing while checking localStorage (prevents flash)
@@ -49,8 +69,78 @@ export default function Home() {
           setIsReading(false)
           setWords([])
           setTitle('')
+          setTextContent('')
         }}
       />
+    )
+  }
+
+  // Show options after PDF is uploaded
+  if (showUploadOptions && words.length > 0) {
+    return (
+      <div className="min-h-screen bg-[color:var(--background)] flex items-center justify-center p-6">
+        <div className="max-w-md w-full">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/10 flex items-center justify-center">
+              <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold mb-2">{title}</h1>
+            <p className="text-[color:var(--muted)]">
+              {words.length.toLocaleString()} words ready
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {/* Read Now */}
+            <button
+              onClick={handleStartReading}
+              className="w-full py-4 bg-[color:var(--accent)] text-white rounded-xl font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-3"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+              Start Reading
+            </button>
+
+            {/* Publish to Library */}
+            <button
+              onClick={() => setShowPublishModal(true)}
+              className="w-full py-4 bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl font-semibold hover:bg-[color:var(--surface-hover)] transition-colors flex items-center justify-center gap-3"
+            >
+              <svg className="w-5 h-5 text-[color:var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              Publish to Library
+              <span className="text-xs text-[color:var(--muted)] ml-1">(optional paywall)</span>
+            </button>
+
+            {/* Cancel */}
+            <button
+              onClick={() => {
+                setShowUploadOptions(false)
+                setWords([])
+                setTitle('')
+                setTextContent('')
+              }}
+              className="w-full py-3 text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors text-sm"
+            >
+              Upload a different file
+            </button>
+          </div>
+        </div>
+
+        {/* Publish Modal */}
+        <PublishModal
+          isOpen={showPublishModal}
+          onClose={() => setShowPublishModal(false)}
+          onPublished={handlePublished}
+          title={title}
+          textContent={textContent}
+          wordCount={words.length}
+        />
+      </div>
     )
   }
 

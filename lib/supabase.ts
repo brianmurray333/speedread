@@ -12,6 +12,9 @@ export type Document = {
   text_content: string
   word_count: number
   is_public: boolean
+  price_sats: number // 0 = free, >0 = paid (L402)
+  lightning_address: string | null // Creator's Lightning Address for payments
+  creator_name: string | null // Optional display name
   created_at: string
   updated_at: string
 }
