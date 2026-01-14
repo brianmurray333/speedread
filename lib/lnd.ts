@@ -36,7 +36,11 @@ async function lndRequest<T>(path: string, options: RequestInit = {}): Promise<T
     throw new Error('LND configuration missing. Set LND_REST_HOST and LND_MACAROON_HEX environment variables.')
   }
 
-  const url = `https://${LND_REST_HOST}${path}`
+  // Remove https:// if user included it in the host
+  const cleanHost = LND_REST_HOST.replace(/^https?:\/\//, '')
+  const url = `https://${cleanHost}${path}`
+  
+  console.log('LND Request URL:', url)
   
   const response = await fetch(url, {
     ...options,
@@ -49,6 +53,7 @@ async function lndRequest<T>(path: string, options: RequestInit = {}): Promise<T
 
   if (!response.ok) {
     const error = await response.text()
+    console.error('LND API error response:', error)
     throw new Error(`LND API error: ${response.status} - ${error}`)
   }
 
