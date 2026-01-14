@@ -127,10 +127,33 @@ export default function LibraryPage() {
     paidDocuments.set(paymentDoc.id, macaroon)
     savePaidDocuments()
 
-    // Close modal and fetch content
-    setShowPaymentModal(false)
-    await fetchPaidContent(paymentDoc, macaroon)
-    setPaymentDoc(null)
+    // Fetch content first, then close modal
+    // This ensures we start reading immediately after payment
+    try {
+      const response = await fetch(
+        `/api/documents/${paymentDoc.id}/content?macaroon=${encodeURIComponent(macaroon)}`
+      )
+      
+      if (response.ok) {
+        const data = await response.json()
+        const docWords = parseTextToWords(data.textContent)
+        
+        // Set reading state before closing modal
+        setWords(docWords)
+        setSelectedDoc(paymentDoc)
+        setShowPaymentModal(false)
+        setPaymentDoc(null)
+        setIsReading(true) // This triggers SpeedReader to render
+      } else {
+        console.error('Failed to fetch content after payment')
+        setShowPaymentModal(false)
+        setPaymentDoc(null)
+      }
+    } catch (e) {
+      console.error('Error fetching content after payment:', e)
+      setShowPaymentModal(false)
+      setPaymentDoc(null)
+    }
   }
 
   const isPaid = (doc: Document) => paidDocuments.has(doc.id)
