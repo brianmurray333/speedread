@@ -32,7 +32,7 @@ export default function Header() {
             <LibraryBig className="w-5 h-5" />
           </Link>
           <Link 
-            href="/#how-it-works" 
+            href="/how-it-works" 
             className="p-2 rounded-lg text-[color:var(--muted)] hover:text-[color:var(--foreground)] hover:bg-[color:var(--surface)] transition-colors"
             aria-label="How it works"
           >
@@ -131,7 +131,7 @@ export default function Header() {
               Library
             </Link>
             <Link 
-              href="/#how-it-works"
+              href="/how-it-works"
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center gap-3 text-[color:var(--foreground)] hover:text-[color:var(--accent)] transition-colors py-3"
             >
