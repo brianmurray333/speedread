@@ -2,7 +2,6 @@
 
 import { useState, useRef } from 'react'
 import { extractTextFromPDF, parseTextToWords } from '@/lib/pdfParser'
-import { supabase } from '@/lib/supabase'
 
 interface PDFUploaderProps {
   onTextExtracted: (words: string[], title: string) => void
@@ -12,7 +11,6 @@ export default function PDFUploader({ onTextExtracted }: PDFUploaderProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dragActive, setDragActive] = useState(false)
-  const [makePublic, setMakePublic] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFile = async (file: File) => {
@@ -35,27 +33,6 @@ export default function PDFUploader({ onTextExtracted }: PDFUploaderProps) {
       }
 
       const title = file.name.replace('.pdf', '')
-
-      // Save to Supabase if user wants to make it public
-      if (makePublic) {
-        try {
-          const { error: dbError } = await supabase
-            .from('documents')
-            .insert({
-              title,
-              text_content: text,
-              word_count: words.length,
-              is_public: true
-            })
-
-          if (dbError) {
-            console.error('Error saving to library:', dbError)
-          }
-        } catch (e) {
-          console.error('Error saving to library:', e)
-        }
-      }
-
       onTextExtracted(words, title)
     } catch (e) {
       console.error('PDF parsing error:', e)
@@ -138,19 +115,6 @@ export default function PDFUploader({ onTextExtracted }: PDFUploaderProps) {
           </>
         )}
       </div>
-
-      {/* Share to library toggle */}
-      <label className="flex items-center justify-center gap-3 mt-4 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={makePublic}
-          onChange={(e) => setMakePublic(e.target.checked)}
-          className="w-5 h-5 rounded border-[color:var(--border)] accent-[color:var(--accent)]"
-        />
-        <span className="text-[color:var(--muted)]">
-          Share to public library
-        </span>
-      </label>
 
       {error && (
         <div className="mt-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-center">

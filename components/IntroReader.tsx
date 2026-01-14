@@ -23,6 +23,7 @@ const SPEED_SCHEDULE: [number, number][] = [
 export default function IntroReader({ onComplete }: IntroReaderProps) {
   const [hasStarted, setHasStarted] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [isFinished, setIsFinished] = useState(false)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [wpm, setWpm] = useState(SPEED_SCHEDULE[0][1])
 
@@ -61,10 +62,7 @@ export default function IntroReader({ onComplete }: IntroReaderProps) {
       setCurrentIndex(prev => {
         if (prev >= words.length - 1) {
           setIsPlaying(false)
-          // Small delay before completing
-          setTimeout(() => {
-            onComplete()
-          }, 1000)
+          setIsFinished(true)
           return prev
         }
         return prev + 1
@@ -72,14 +70,16 @@ export default function IntroReader({ onComplete }: IntroReaderProps) {
     }, interval)
 
     return () => clearInterval(timer)
-  }, [isPlaying, interval, words.length, onComplete])
+  }, [isPlaying, interval, words.length])
 
   // Keyboard: space to start/pause
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === ' ') {
         e.preventDefault()
-        if (!hasStarted) {
+        if (isFinished) {
+          onComplete()
+        } else if (!hasStarted) {
           handleStart()
         } else {
           setIsPlaying(prev => !prev)
@@ -89,7 +89,7 @@ export default function IntroReader({ onComplete }: IntroReaderProps) {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [hasStarted, handleStart])
+  }, [hasStarted, isFinished, handleStart, onComplete])
 
   // Render word with ORP at fixed center position (same as SpeedReader)
   const renderWord = () => {
@@ -143,8 +143,8 @@ export default function IntroReader({ onComplete }: IntroReaderProps) {
         </div>
       )}
 
-      {/* Progress indicator - only show after started */}
-      {hasStarted && (
+      {/* Progress indicator - only show while playing */}
+      {hasStarted && !isFinished && (
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
           <div className="w-48 h-1 bg-[color:var(--border)] rounded-full overflow-hidden">
             <div 
@@ -152,6 +152,18 @@ export default function IntroReader({ onComplete }: IntroReaderProps) {
               style={{ width: `${((currentIndex + 1) / words.length) * 100}%` }}
             />
           </div>
+        </div>
+      )}
+
+      {/* Get Started button - show after intro finishes */}
+      {isFinished && (
+        <div className="absolute bottom-24">
+          <button
+            onClick={onComplete}
+            className="btn-primary text-lg px-8 py-3"
+          >
+            Get started
+          </button>
         </div>
       )}
     </div>

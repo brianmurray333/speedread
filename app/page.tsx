@@ -72,7 +72,7 @@ export default function Home() {
           
           <PDFUploader onTextExtracted={handleTextExtracted} />
           
-          <div className="mt-8 flex items-center justify-center gap-4 text-[color:var(--muted)]">
+          <div className="mt-8 flex items-center justify-center gap-2 text-[color:var(--muted)]">
             <span>or</span>
             <Link href="/library" className="text-[color:var(--accent)] hover:underline font-medium">
               Browse the library →

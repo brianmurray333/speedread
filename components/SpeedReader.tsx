@@ -7,6 +7,7 @@ import { useTheme } from './ThemeProvider'
 interface SpeedReaderProps {
   words: string[]
   initialWpm?: number
+  autoStart?: boolean  // If true, show countdown and autoplay
   onComplete?: () => void
   onExit?: () => void
 }
@@ -14,13 +15,15 @@ interface SpeedReaderProps {
 export default function SpeedReader({ 
   words, 
   initialWpm = 300, 
+  autoStart = false,
   onComplete,
   onExit 
 }: SpeedReaderProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [wpm, setWpm] = useState(initialWpm)
-  const [showControls, setShowControls] = useState(true)
+  const [showControls, setShowControls] = useState(!autoStart) // Hide controls if autoStart
+  const [countdown, setCountdown] = useState<number | null>(autoStart ? 3 : null)
   const hideControlsTimeout = useRef<NodeJS.Timeout | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const { theme, toggleTheme } = useTheme()
@@ -31,6 +34,23 @@ export default function SpeedReader({
 
   // Calculate interval from WPM
   const interval = Math.round(60000 / wpm)
+
+  // Countdown timer for autoStart
+  useEffect(() => {
+    if (countdown === null) return
+
+    if (countdown === 0) {
+      setCountdown(null)
+      setIsPlaying(true)
+      return
+    }
+
+    const timer = setTimeout(() => {
+      setCountdown(prev => (prev !== null ? prev - 1 : null))
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [countdown])
 
   // Auto-advance words
   useEffect(() => {
@@ -56,23 +76,26 @@ export default function SpeedReader({
     if (hideControlsTimeout.current) {
       clearTimeout(hideControlsTimeout.current)
     }
-    if (isPlaying) {
+    if (isPlaying || countdown !== null) {
       hideControlsTimeout.current = setTimeout(() => {
         setShowControls(false)
       }, 2000)
     }
-  }, [isPlaying])
+  }, [isPlaying, countdown])
 
   useEffect(() => {
-    if (isPlaying) {
-      resetControlsTimeout()
+    if (isPlaying || countdown !== null) {
+      // Start with controls hidden for autoStart, then show briefly on interaction
+      if (!autoStart || showControls) {
+        resetControlsTimeout()
+      }
     } else {
       setShowControls(true)
       if (hideControlsTimeout.current) {
         clearTimeout(hideControlsTimeout.current)
       }
     }
-  }, [isPlaying, resetControlsTimeout])
+  }, [isPlaying, countdown, autoStart, showControls, resetControlsTimeout])
 
   // Mouse/touch handlers for showing controls
   const handleInteraction = useCallback(() => {
@@ -83,6 +106,11 @@ export default function SpeedReader({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       handleInteraction()
+      
+      // Cancel countdown on any key press
+      if (countdown !== null) {
+        setCountdown(null)
+      }
       
       switch (e.key) {
         case ' ':
@@ -117,7 +145,7 @@ export default function SpeedReader({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isPlaying, words.length, onExit, handleInteraction])
+  }, [isPlaying, countdown, words.length, onExit, handleInteraction])
 
   // Render word with ORP at fixed center position
   const renderWord = () => {
@@ -144,11 +172,18 @@ export default function SpeedReader({
   return (
     <div 
       ref={containerRef}
-      className={`fixed inset-0 bg-[color:var(--background)] flex flex-col items-center justify-center ${isPlaying && !showControls ? 'reading-mode' : ''}`}
+      className={`fixed inset-0 bg-[color:var(--background)] flex flex-col items-center justify-center ${(isPlaying || countdown !== null) && !showControls ? 'reading-mode' : ''}`}
       onMouseMove={handleInteraction}
       onTouchStart={handleInteraction}
       onClick={handleInteraction}
     >
+      {/* Countdown display */}
+      {countdown !== null && (
+        <div className="absolute top-8 left-1/2 -translate-x-1/2">
+          <span className="text-6xl font-bold text-[color:var(--accent)]">{countdown}</span>
+        </div>
+      )}
+
       {/* Word Display - ORP always at exact center */}
       <div className="flex-1 flex items-center justify-center w-full">
         <div 

@@ -56,6 +56,7 @@ export default function LibraryPage() {
     return (
       <SpeedReader
         words={words}
+        autoStart={true}
         onComplete={() => {}}
         onExit={() => {
           setIsReading(false)
