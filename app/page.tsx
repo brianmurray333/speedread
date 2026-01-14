@@ -162,14 +162,17 @@ export default function Home() {
           {/* Demo */}
           <div className="mt-16 text-center">
             <h3 className="text-2xl font-semibold mb-6">See the ORP in action</h3>
-            <div className="inline-block bg-[color:var(--surface)] rounded-xl p-8 border border-[color:var(--border)]">
-              <div className="text-5xl sm:text-6xl font-normal tracking-wide" style={{ fontFamily: 'system-ui, Arial, sans-serif' }}>
-                <span>Sp</span>
+            <div className="inline-block bg-[color:var(--surface)] rounded-xl p-8 border border-[color:var(--border)] min-w-[320px]">
+              <div 
+                className="text-5xl sm:text-6xl font-normal tracking-wide flex items-baseline justify-center" 
+                style={{ fontFamily: 'system-ui, Arial, sans-serif' }}
+              >
+                <span className="text-right" style={{ width: '45%' }}>Sp</span>
                 <span className="text-[color:var(--accent)] font-semibold">e</span>
-                <span>edRead</span>
+                <span className="text-left" style={{ width: '45%' }}>edRead</span>
               </div>
               <p className="text-[color:var(--muted)] mt-4 text-sm">
-                The red &ldquo;e&rdquo; is the Optimal Recognition Point
+                The red letter stays fixed at the center
               </p>
             </div>
           </div>

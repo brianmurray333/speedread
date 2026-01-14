@@ -21,7 +21,6 @@ export default function SpeedReader({
   const [isPlaying, setIsPlaying] = useState(false)
   const [wpm, setWpm] = useState(initialWpm)
   const [showControls, setShowControls] = useState(true)
-  const [wordKey, setWordKey] = useState(0)
   const hideControlsTimeout = useRef<NodeJS.Timeout | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const { theme, toggleTheme } = useTheme()
@@ -44,7 +43,6 @@ export default function SpeedReader({
           onComplete?.()
           return prev
         }
-        setWordKey(k => k + 1)
         return prev + 1
       })
     }, interval)
@@ -94,13 +92,11 @@ export default function SpeedReader({
         case 'ArrowRight':
           if (!isPlaying) {
             setCurrentIndex(prev => Math.min(prev + 1, words.length - 1))
-            setWordKey(k => k + 1)
           }
           break
         case 'ArrowLeft':
           if (!isPlaying) {
             setCurrentIndex(prev => Math.max(prev - 1, 0))
-            setWordKey(k => k + 1)
           }
           break
         case 'ArrowUp':
@@ -115,7 +111,6 @@ export default function SpeedReader({
         case 'r':
           setCurrentIndex(0)
           setIsPlaying(false)
-          setWordKey(k => k + 1)
           break
       }
     }
@@ -124,7 +119,7 @@ export default function SpeedReader({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isPlaying, words.length, onExit, handleInteraction])
 
-  // Render word with highlighted ORP
+  // Render word with ORP at fixed center position
   const renderWord = () => {
     if (!currentWord) return null
 
@@ -133,11 +128,24 @@ export default function SpeedReader({
     const after = currentWord.slice(orpIndex + 1)
 
     return (
-      <span key={wordKey} className="word-animate inline-flex items-baseline">
-        <span className="text-[color:var(--foreground)]">{before}</span>
+      <div className="flex items-baseline justify-center">
+        {/* Before ORP - right aligned, fixed width */}
+        <span 
+          className="text-[color:var(--foreground)] text-right"
+          style={{ width: '45%', display: 'inline-block' }}
+        >
+          {before}
+        </span>
+        {/* ORP - fixed center position */}
         <span className="text-[color:var(--accent)] font-semibold">{orp}</span>
-        <span className="text-[color:var(--foreground)]">{after}</span>
-      </span>
+        {/* After ORP - left aligned, fixed width */}
+        <span 
+          className="text-[color:var(--foreground)] text-left"
+          style={{ width: '45%', display: 'inline-block' }}
+        >
+          {after}
+        </span>
+      </div>
     )
   }
 
@@ -149,23 +157,13 @@ export default function SpeedReader({
       onTouchStart={handleInteraction}
       onClick={handleInteraction}
     >
-      {/* Word Display - Always visible, centered */}
+      {/* Word Display - ORP always at exact center */}
       <div className="flex-1 flex items-center justify-center w-full">
-        <div className="text-center px-8">
-          {/* Alignment guide - subtle vertical line at ORP position */}
-          <div className="relative inline-block">
-            <div 
-              className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-normal tracking-wide"
-              style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif' }}
-            >
-              {renderWord()}
-            </div>
-            {/* ORP alignment line */}
-            <div 
-              className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full opacity-0"
-              style={{ background: 'var(--accent)' }}
-            />
-          </div>
+        <div 
+          className="w-full max-w-4xl px-4 text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-normal tracking-wide"
+          style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif' }}
+        >
+          {renderWord()}
         </div>
       </div>
 
@@ -230,7 +228,6 @@ export default function SpeedReader({
             onClick={() => {
               setCurrentIndex(0)
               setIsPlaying(false)
-              setWordKey(k => k + 1)
             }}
             className="btn-secondary flex items-center gap-2"
           >
