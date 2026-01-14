@@ -30,7 +30,14 @@ export default function LibraryPage() {
         return
       }
 
-      setDocuments(data || [])
+      // Sort Bitcoin whitepaper to the top
+      const sorted = (data || []).sort((a, b) => {
+        if (a.title.includes('Bitcoin')) return -1
+        if (b.title.includes('Bitcoin')) return 1
+        return 0
+      })
+
+      setDocuments(sorted)
     } catch (e) {
       console.error('Error:', e)
     } finally {
