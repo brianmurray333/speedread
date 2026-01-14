@@ -126,20 +126,21 @@ export default function IntroReader({ onComplete }: IntroReaderProps) {
 
       {/* Play button - only show before started */}
       {!hasStarted && (
-        <div className="absolute bottom-24">
+        <div className="absolute bottom-16 sm:bottom-24 flex flex-col items-center gap-3">
           <button
             onClick={handleStart}
-            className="w-14 h-14 rounded-full bg-[color:var(--accent)] text-white flex items-center justify-center hover:opacity-90 transition-all hover:scale-105"
+            className="w-16 h-16 sm:w-14 sm:h-14 rounded-full bg-[color:var(--accent)] text-white flex items-center justify-center hover:opacity-90 transition-all hover:scale-105"
             aria-label="Start intro"
           >
             <svg 
-              className="w-6 h-6 ml-0.5" 
+              className="w-7 h-7 sm:w-6 sm:h-6 ml-0.5" 
               fill="currentColor" 
               viewBox="0 0 24 24"
             >
               <path d="M8 5v14l11-7z" />
             </svg>
           </button>
+          <span className="text-[color:var(--muted)] text-sm sm:hidden">Tap to start</span>
         </div>
       )}
 
@@ -157,10 +158,10 @@ export default function IntroReader({ onComplete }: IntroReaderProps) {
 
       {/* Get Started button - show after intro finishes */}
       {isFinished && (
-        <div className="absolute bottom-24">
+        <div className="absolute bottom-16 sm:bottom-24">
           <button
             onClick={onComplete}
-            className="btn-primary text-lg px-8 py-3"
+            className="btn-primary text-base sm:text-lg px-6 sm:px-8 py-3"
           >
             Get started
           </button>

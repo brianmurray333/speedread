@@ -231,19 +231,19 @@ export default function SpeedReader({
         </div>
 
         {/* Control buttons */}
-        <div className="flex items-center justify-center gap-4 flex-wrap">
+        <div className="flex items-center justify-center gap-2 sm:gap-4 flex-wrap px-2">
           {/* WPM control */}
-          <div className="flex items-center gap-2 bg-[color:var(--surface)] rounded-lg px-4 py-2">
+          <div className="flex items-center gap-1 sm:gap-2 bg-[color:var(--surface)] rounded-lg px-2 sm:px-4 py-2">
             <button
               onClick={() => setWpm(prev => Math.max(prev - 50, 50))}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[color:var(--surface-hover)] transition-colors"
+              className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded-full hover:bg-[color:var(--surface-hover)] transition-colors text-lg"
             >
               −
             </button>
-            <span className="w-20 text-center font-medium">{wpm} WPM</span>
+            <span className="w-16 sm:w-20 text-center font-medium text-sm sm:text-base">{wpm} WPM</span>
             <button
               onClick={() => setWpm(prev => Math.min(prev + 50, 1000))}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[color:var(--surface-hover)] transition-colors"
+              className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded-full hover:bg-[color:var(--surface-hover)] transition-colors text-lg"
             >
               +
             </button>
@@ -252,7 +252,7 @@ export default function SpeedReader({
           {/* Play/Pause */}
           <button
             onClick={() => setIsPlaying(prev => !prev)}
-            className="btn-primary w-24 flex items-center justify-center gap-2"
+            className="btn-primary w-20 sm:w-24 flex items-center justify-center gap-1 sm:gap-2 py-3"
           >
             {isPlaying ? (
               <>
@@ -278,18 +278,19 @@ export default function SpeedReader({
               setCurrentIndex(0)
               setIsPlaying(false)
             }}
-            className="btn-secondary flex items-center gap-2"
+            className="btn-secondary flex items-center gap-1 sm:gap-2 py-3 px-3 sm:px-4"
+            aria-label="Restart"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            Restart
+            <span className="hidden sm:inline">Restart</span>
           </button>
 
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className="btn-secondary flex items-center gap-2"
+            className="btn-secondary flex items-center gap-2 py-3 px-3 sm:px-4"
           >
             {theme === 'dark' ? (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -304,9 +305,13 @@ export default function SpeedReader({
           </button>
         </div>
 
-        {/* Keyboard shortcuts hint */}
-        <p className="text-center text-[color:var(--muted)] text-sm mt-4">
+        {/* Keyboard shortcuts hint - desktop */}
+        <p className="hidden sm:block text-center text-[color:var(--muted)] text-sm mt-4">
           Space: play/pause • ←→: navigate • ↑↓: speed
+        </p>
+        {/* Touch hint - mobile */}
+        <p className="sm:hidden text-center text-[color:var(--muted)] text-sm mt-4">
+          Tap screen to show/hide controls
         </p>
 
         {/* Word count */}

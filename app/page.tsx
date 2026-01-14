@@ -149,13 +149,13 @@ export default function Home() {
       <Header />
       
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6">
+      <section className="pt-24 sm:pt-32 pb-12 sm:pb-20 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 leading-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 sm:mb-6 leading-tight">
             Read <span className="text-[color:var(--accent)]">faster</span>,<br />
             retain <span className="text-[color:var(--accent)]">more</span>
           </h1>
-          <p className="text-xl text-[color:var(--muted)] mb-12 max-w-2xl mx-auto">
+          <p className="text-lg sm:text-xl text-[color:var(--muted)] mb-8 sm:mb-12 max-w-2xl mx-auto px-2">
             Upload any PDF and read it word-by-word using the scientifically-backed RSVP technique. 
             No distractions, maximum focus.
           </p>
@@ -172,34 +172,34 @@ export default function Home() {
       </section>
 
       {/* Stats */}
-      <section className="py-16 px-6 border-t border-b border-[color:var(--border)]">
-        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
+      <section className="py-12 sm:py-16 px-4 sm:px-6 border-t border-b border-[color:var(--border)]">
+        <div className="max-w-4xl mx-auto grid grid-cols-3 gap-4 sm:gap-8 text-center">
           <div>
-            <div className="text-4xl font-bold text-[color:var(--accent)] mb-2">2-3x</div>
-            <div className="text-[color:var(--muted)]">Faster reading speed</div>
+            <div className="text-2xl sm:text-4xl font-bold text-[color:var(--accent)] mb-1 sm:mb-2">2-3x</div>
+            <div className="text-[color:var(--muted)] text-xs sm:text-base">Faster reading</div>
           </div>
           <div>
-            <div className="text-4xl font-bold text-[color:var(--accent)] mb-2">300+</div>
-            <div className="text-[color:var(--muted)]">Default words/minute</div>
+            <div className="text-2xl sm:text-4xl font-bold text-[color:var(--accent)] mb-1 sm:mb-2">300+</div>
+            <div className="text-[color:var(--muted)] text-xs sm:text-base">Words/minute</div>
           </div>
           <div>
-            <div className="text-4xl font-bold text-[color:var(--accent)] mb-2">0</div>
-            <div className="text-[color:var(--muted)]">Distractions</div>
+            <div className="text-2xl sm:text-4xl font-bold text-[color:var(--accent)] mb-1 sm:mb-2">0</div>
+            <div className="text-[color:var(--muted)] text-xs sm:text-base">Distractions</div>
           </div>
         </div>
       </section>
 
       {/* How It Works */}
-      <section id="how-it-works" className="py-20 px-6">
+      <section id="how-it-works" className="py-12 sm:py-20 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-3 sm:mb-4">
             How It <span className="text-[color:var(--accent)]">Works</span>
           </h2>
-          <p className="text-center text-[color:var(--muted)] mb-12 max-w-2xl mx-auto">
+          <p className="text-center text-[color:var(--muted)] text-sm sm:text-base mb-8 sm:mb-12 max-w-2xl mx-auto px-2">
             SpeedRead uses Rapid Serial Visual Presentation (RSVP), a technique backed by reading science.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
             {/* Feature 1 */}
             <div className="card">
               <div className="w-12 h-12 rounded-lg bg-[color:var(--accent)]/10 flex items-center justify-center mb-4">
@@ -250,11 +250,11 @@ export default function Home() {
           </div>
 
           {/* Demo */}
-          <div className="mt-16 text-center">
-            <h3 className="text-2xl font-semibold mb-6">See the ORP in action</h3>
-            <div className="inline-block bg-[color:var(--surface)] rounded-xl p-8 border border-[color:var(--border)] min-w-[400px]">
+          <div className="mt-10 sm:mt-16 text-center">
+            <h3 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">See the ORP in action</h3>
+            <div className="inline-block bg-[color:var(--surface)] rounded-xl p-6 sm:p-8 border border-[color:var(--border)] w-full max-w-md">
               <div 
-                className="text-5xl sm:text-6xl font-normal tracking-wide flex justify-center" 
+                className="text-4xl sm:text-5xl md:text-6xl font-normal tracking-wide flex justify-center" 
                 style={{ fontFamily: 'system-ui, Arial, sans-serif' }}
               >
                 <span className="text-right inline-block" style={{ minWidth: '40%' }}>Sp</span>
@@ -270,12 +270,12 @@ export default function Home() {
       </section>
 
       {/* CTA */}
-      <section className="py-20 px-6 bg-[color:var(--surface)] border-t border-[color:var(--border)]">
+      <section className="py-12 sm:py-20 px-4 sm:px-6 bg-[color:var(--surface)] border-t border-[color:var(--border)]">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-6">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6">
             Ready to read <span className="text-[color:var(--accent)]">faster</span>?
           </h2>
-          <p className="text-[color:var(--muted)] text-lg mb-8">
+          <p className="text-[color:var(--muted)] text-base sm:text-lg mb-6 sm:mb-8">
             Upload your first PDF and experience the difference.
           </p>
           <button 
@@ -288,8 +288,8 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 px-6 border-t border-[color:var(--border)]">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <footer className="py-6 sm:py-8 px-4 sm:px-6 border-t border-[color:var(--border)]">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
           <div className="text-[color:var(--muted)] text-sm">
             © {new Date().getFullYear()} SpeedRead. Read faster, retain more.
           </div>

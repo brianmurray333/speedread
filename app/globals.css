@@ -43,6 +43,20 @@
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent text selection during speed reading */
+.reading-mode {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Ensure touch targets are at least 44px for accessibility */
+@media (max-width: 640px) {
+  button, a {
+    min-height: 44px;
+  }
 }
 
 body {
@@ -52,13 +66,15 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Reading mode - full immersion */
-.reading-mode {
-  cursor: none;
-}
+/* Reading mode - full immersion (desktop only) */
+@media (hover: hover) {
+  .reading-mode {
+    cursor: none;
+  }
 
-.reading-mode:hover {
-  cursor: default;
+  .reading-mode:hover {
+    cursor: default;
+  }
 }
 
 /* Smooth fade for controls */

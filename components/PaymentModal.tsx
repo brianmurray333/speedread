@@ -204,13 +204,15 @@ export default function PaymentModal({
         </button>
 
         {/* Header */}
-        <div className="text-center mb-6">
-          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[color:var(--accent)]/10 flex items-center justify-center">
-            <svg className="w-6 h-6 text-[color:var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+        <div className="text-center mb-4 sm:mb-6">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-2 sm:mb-3 rounded-full bg-[#F7931A]/20 flex items-center justify-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#F7931A] flex items-center justify-center">
+              <svg className="w-6 h-6 sm:w-7 sm:h-7" viewBox="0 0 64 64" fill="none">
+                <path fill="#ffffff" d="M46.11 27.44c.63-4.23-2.6-6.5-7.03-8.02l1.44-5.76-3.51-.88-1.4 5.61c-.92-.23-1.87-.45-2.81-.66l1.41-5.64-3.51-.88-1.44 5.75c-.76-.17-1.5-.34-2.23-.52l-4.84-1.2-.93 3.75s2.6.6 2.54.63c1.42.36 1.67 1.3 1.63 2.04l-1.64 6.56c.1.03.23.07.37.12l-.38-.09-2.3 9.2c-.17.43-.62 1.08-1.62.83.04.05-2.54-.63-2.54-.63l-1.74 4.02 4.57 1.14c.85.21 1.68.44 2.5.65l-1.45 5.84 3.5.88 1.44-5.77c.96.26 1.89.5 2.8.73l-1.43 5.74 3.51.88 1.45-5.83c5.99 1.13 10.49.68 12.38-4.74 1.53-4.36-.08-6.88-3.23-8.52 2.3-.53 4.03-2.04 4.49-5.15zm-8.03 11.26c-1.09 4.36-8.44 2-10.83 1.41l1.93-7.74c2.39.6 10.02 1.78 8.9 6.33zm1.08-11.33c-.99 3.97-7.1 1.95-9.09 1.46l1.75-7.02c1.99.5 8.36 1.42 7.34 5.56z"/>
+              </svg>
+            </div>
           </div>
-          <h2 className="text-xl font-bold mb-1">Pay with Lightning</h2>
+          <h2 className="text-xl font-bold mb-1">Pay with Bitcoin</h2>
           <p className="text-[color:var(--muted)] text-sm">
             {documentTitle}
           </p>
@@ -223,7 +225,7 @@ export default function PaymentModal({
 
         {loading ? (
           <div className="flex flex-col items-center py-8">
-            <div className="w-10 h-10 border-4 border-[color:var(--accent)] border-t-transparent rounded-full animate-spin mb-4" />
+            <div className="w-10 h-10 border-4 border-[#F7931A] border-t-transparent rounded-full animate-spin mb-4" />
             <p className="text-[color:var(--muted)]">Generating invoice...</p>
           </div>
         ) : error && !challenge ? (
@@ -231,7 +233,7 @@ export default function PaymentModal({
             <p className="text-red-400 mb-4">{error}</p>
             <button
               onClick={fetchChallenge}
-              className="px-4 py-2 bg-[color:var(--accent)] text-white rounded-lg hover:opacity-90 transition-opacity"
+              className="px-4 py-2 bg-[#F7931A] text-white rounded-lg hover:opacity-90 transition-opacity"
             >
               Try Again
             </button>
@@ -240,7 +242,7 @@ export default function PaymentModal({
           <div className="space-y-4">
             {/* Price */}
             <div className="text-center">
-              <span className="text-3xl font-bold text-[color:var(--accent)]">
+              <span className="text-3xl font-bold text-[#F7931A]">
                 {challenge.priceSats}
               </span>
               <span className="text-[color:var(--muted)] ml-2">sats</span>
@@ -251,7 +253,7 @@ export default function PaymentModal({
               <button
                 onClick={handleWebLNPayment}
                 disabled={webLNPaying}
-                className="w-full py-3 bg-[color:var(--accent)] text-white rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full py-3 bg-[#F7931A] text-white rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {webLNPaying ? (
                   <>
@@ -260,10 +262,11 @@ export default function PaymentModal({
                   </>
                 ) : (
                   <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    <svg className="w-5 h-5" viewBox="0 0 64 64" fill="none">
+                      <circle cx="32" cy="32" r="32" fill="currentColor" fillOpacity="0.2"/>
+                      <path fill="currentColor" d="M46.11 27.44c.63-4.23-2.6-6.5-7.03-8.02l1.44-5.76-3.51-.88-1.4 5.61c-.92-.23-1.87-.45-2.81-.66l1.41-5.64-3.51-.88-1.44 5.75c-.76-.17-1.5-.34-2.23-.52l-4.84-1.2-.93 3.75s2.6.6 2.54.63c1.42.36 1.67 1.3 1.63 2.04l-1.64 6.56c.1.03.23.07.37.12l-.38-.09-2.3 9.2c-.17.43-.62 1.08-1.62.83.04.05-2.54-.63-2.54-.63l-1.74 4.02 4.57 1.14c.85.21 1.68.44 2.5.65l-1.45 5.84 3.5.88 1.44-5.77c.96.26 1.89.5 2.8.73l-1.43 5.74 3.51.88 1.45-5.83c5.99 1.13 10.49.68 12.38-4.74 1.53-4.36-.08-6.88-3.23-8.52 2.3-.53 4.03-2.04 4.49-5.15zm-8.03 11.26c-1.09 4.36-8.44 2-10.83 1.41l1.93-7.74c2.39.6 10.02 1.78 8.9 6.33zm1.08-11.33c-.99 3.97-7.1 1.95-9.09 1.46l1.75-7.02c1.99.5 8.36 1.42 7.34 5.56z"/>
                     </svg>
-                    Pay with Alby / WebLN
+                    Pay with Bitcoin
                   </>
                 )}
               </button>
@@ -280,8 +283,8 @@ export default function PaymentModal({
             {/* QR Code */}
             {qrCodeUrl && (
               <div className="flex justify-center">
-                <div className="bg-white p-3 rounded-xl">
-                  <img src={qrCodeUrl} alt="Lightning Invoice QR" className="w-48 h-48" />
+                <div className="bg-white p-2 sm:p-3 rounded-xl">
+                  <img src={qrCodeUrl} alt="Lightning Invoice QR" className="w-40 h-40 sm:w-48 sm:h-48" />
                 </div>
               </div>
             )}
@@ -313,7 +316,7 @@ export default function PaymentModal({
               <div className="flex items-center gap-2">
                 {checking ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-[color:var(--accent)] border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-[#F7931A] border-t-transparent rounded-full animate-spin" />
                     Checking payment...
                   </>
                 ) : (

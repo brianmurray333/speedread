@@ -154,14 +154,14 @@ export default function LibraryPage() {
     <div className="min-h-screen bg-[color:var(--background)]">
       <Header />
       
-      <main className="pt-24 pb-16 px-6">
+      <main className="pt-20 sm:pt-24 pb-12 sm:pb-16 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold mb-4">
+          <div className="text-center mb-8 sm:mb-12">
+            <h1 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">
               Public <span className="text-[color:var(--accent)]">Library</span>
             </h1>
-            <p className="text-[color:var(--muted)] text-lg max-w-2xl mx-auto">
-              Browse PDFs shared by the community. Click any document to start speed reading.
+            <p className="text-[color:var(--muted)] text-base sm:text-lg max-w-2xl mx-auto px-2">
+              Browse PDFs shared by the community. Tap any document to start speed reading.
             </p>
           </div>
 
@@ -191,11 +191,11 @@ export default function LibraryPage() {
                 <button
                   key={doc.id}
                   onClick={() => handleReadDocument(doc)}
-                  className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-4 text-left hover:bg-[color:var(--surface-hover)] hover:border-[color:var(--accent)] transition-all flex items-center gap-4 relative"
+                  className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-3 sm:p-4 text-left hover:bg-[color:var(--surface-hover)] hover:border-[color:var(--accent)] transition-all flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 relative"
                 >
                   {/* Paid badge */}
                   {doc.price_sats > 0 && (
-                    <div className="absolute top-2 right-2">
+                    <div className="absolute top-2 right-2 sm:top-2 sm:right-2">
                       {isPaid(doc) ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -205,9 +205,9 @@ export default function LibraryPage() {
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[#F7931A]/10 text-[#F7931A] border border-[#F7931A]/20">
-                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12.5 8.8v-1.2h-1v1.15c-.26.02-.53.06-.78.12V7.6h-1v1.4c-.83.25-1.47.71-1.47 1.58 0 .9.67 1.38 1.47 1.58v2.2c-.45-.08-.89-.26-1.25-.52l-.5.87c.5.35 1.12.58 1.75.67v1.02h1v-.97c.26-.02.52-.05.78-.1v1.07h1v-1.2c1.18-.25 1.97-.87 1.97-1.88 0-1.06-.79-1.56-1.97-1.8V9.4c.35.07.68.2.97.38l.45-.85c-.4-.26-.9-.44-1.42-.53zm-1.78 1.05v1.87c-.5-.14-.72-.36-.72-.7 0-.37.22-.58.72-.72zm1.06 4.8v-1.97c.57.16.82.4.82.76 0 .42-.25.65-.82.76z"/>
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+                          <svg className="w-3 h-3" viewBox="0 0 64 64" fill="none">
+                            <circle cx="32" cy="32" r="32" fill="currentColor"/>
+                            <path fill="#ffffff" transform="scale(0.7) translate(14, 14)" d="M46.11 27.44c.63-4.23-2.6-6.5-7.03-8.02l1.44-5.76-3.51-.88-1.4 5.61c-.92-.23-1.87-.45-2.81-.66l1.41-5.64-3.51-.88-1.44 5.75c-.76-.17-1.5-.34-2.23-.52l-4.84-1.2-.93 3.75s2.6.6 2.54.63c1.42.36 1.67 1.3 1.63 2.04l-1.64 6.56c.1.03.23.07.37.12l-.38-.09-2.3 9.2c-.17.43-.62 1.08-1.62.83.04.05-2.54-.63-2.54-.63l-1.74 4.02 4.57 1.14c.85.21 1.68.44 2.5.65l-1.45 5.84 3.5.88 1.44-5.77c.96.26 1.89.5 2.8.73l-1.43 5.74 3.51.88 1.45-5.83c5.99 1.13 10.49.68 12.38-4.74 1.53-4.36-.08-6.88-3.23-8.52 2.3-.53 4.03-2.04 4.49-5.15zm-8.03 11.26c-1.09 4.36-8.44 2-10.83 1.41l1.93-7.74c2.39.6 10.02 1.78 8.9 6.33zm1.08-11.33c-.99 3.97-7.1 1.95-9.09 1.46l1.75-7.02c1.99.5 8.36 1.42 7.34 5.56z"/>
                           </svg>
                           {doc.price_sats} sats
                         </span>
@@ -215,27 +215,29 @@ export default function LibraryPage() {
                     </div>
                   )}
                   
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[color:var(--accent)]/10 flex items-center justify-center">
-                    <svg 
-                      className="w-5 h-5 text-[color:var(--accent)]" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      strokeWidth="2" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0 pr-16">
-                    <h3 className="font-semibold truncate hover:text-[color:var(--accent)] transition-colors">
-                      {doc.title}
-                    </h3>
-                    <p className="text-[color:var(--muted)] text-sm">
-                      {doc.word_count.toLocaleString()} words
-                      {doc.creator_name && (
-                        <span className="ml-2">• by {doc.creator_name}</span>
-                      )}
-                    </p>
+                  <div className="flex items-center gap-3 sm:gap-4 w-full">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[color:var(--accent)]/10 flex items-center justify-center">
+                      <svg 
+                        className="w-5 h-5 text-[color:var(--accent)]" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0 pr-12 sm:pr-16">
+                      <h3 className="font-semibold truncate hover:text-[color:var(--accent)] transition-colors text-sm sm:text-base">
+                        {doc.title}
+                      </h3>
+                      <p className="text-[color:var(--muted)] text-xs sm:text-sm">
+                        {doc.word_count.toLocaleString()} words
+                        {doc.creator_name && (
+                          <span className="ml-1 sm:ml-2">• {doc.creator_name}</span>
+                        )}
+                      </p>
+                    </div>
                   </div>
                 </button>
               ))}
