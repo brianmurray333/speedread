@@ -177,10 +177,10 @@ export default function SpeedReader({
       onTouchStart={handleInteraction}
       onClick={handleInteraction}
     >
-      {/* Countdown display - centered on page */}
+      {/* Countdown display - top of screen, horizontally centered */}
       {countdown !== null && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <span className="text-8xl font-bold text-[color:var(--accent)]">{countdown}</span>
+        <div className="absolute top-12 left-0 right-0 flex justify-center pointer-events-none">
+          <span className="text-6xl font-bold text-[color:var(--accent)]">{countdown}</span>
         </div>
       )}
 
