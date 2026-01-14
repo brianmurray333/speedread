@@ -125,7 +125,7 @@ export default function HowItWorksPage() {
   return (
     <div className="fixed inset-0 bg-[color:var(--background)] flex flex-col">
       {/* Minimal header */}
-      <header className="absolute top-0 left-0 right-0 z-10 p-4 sm:p-6 flex items-center justify-between">
+      <header className="flex-shrink-0 p-4 sm:p-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group">
           <BookOpenText className="w-6 h-6 text-[color:var(--accent)]" />
           <span className="text-xl font-bold">
@@ -141,8 +141,15 @@ export default function HowItWorksPage() {
         </Link>
       </header>
 
-      {/* Word Display */}
-      <div className="flex-1 flex items-center justify-center w-full">
+      {/* WPM indicator */}
+      <div className="flex-shrink-0 h-8 flex items-center justify-center">
+        {hasStarted && !isFinished && (
+          <span className="text-[color:var(--muted)] text-sm">{wpm} WPM</span>
+        )}
+      </div>
+
+      {/* Word Display - takes remaining space */}
+      <div className="flex-1 flex items-center justify-center w-full min-h-0">
         <div 
           className="w-full max-w-4xl px-4 text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-normal tracking-wide"
           style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif' }}
@@ -151,73 +158,86 @@ export default function HowItWorksPage() {
         </div>
       </div>
 
-      {/* WPM indicator - show while playing */}
-      {hasStarted && !isFinished && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 text-[color:var(--muted)] text-sm">
-          {wpm} WPM
-        </div>
-      )}
-
-      {/* Play button - only show before started */}
-      {!hasStarted && (
-        <div className="absolute bottom-20 sm:bottom-24 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
-          <button
-            onClick={handleStart}
-            className="w-16 h-16 sm:w-14 sm:h-14 rounded-full bg-[color:var(--accent)] text-white flex items-center justify-center hover:opacity-90 transition-all hover:scale-105"
-            aria-label="Start demo"
-          >
-            <svg 
-              className="w-7 h-7 sm:w-6 sm:h-6 ml-0.5" 
-              fill="currentColor" 
-              viewBox="0 0 24 24"
+      {/* Bottom controls section - fixed height */}
+      <div className="flex-shrink-0 h-40 sm:h-48 flex flex-col items-center justify-start pt-4">
+        {/* Play button - before started */}
+        {!hasStarted && (
+          <div className="flex flex-col items-center gap-3">
+            <button
+              onClick={handleStart}
+              className="w-14 h-14 rounded-full bg-[color:var(--accent)] text-white flex items-center justify-center hover:opacity-90 transition-all hover:scale-105"
+              aria-label="Start demo"
             >
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </button>
-          <span className="text-[color:var(--muted)] text-sm">Watch the demo</span>
-        </div>
-      )}
+              <svg 
+                className="w-6 h-6 ml-0.5" 
+                fill="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </button>
+            <span className="text-[color:var(--muted)] text-sm">Watch the demo</span>
+          </div>
+        )}
 
-      {/* Progress indicator - only show while playing */}
-      {hasStarted && !isFinished && (
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2">
+        {/* Progress indicator - while playing */}
+        {hasStarted && !isFinished && (
           <div className="w-48 h-1 bg-[color:var(--border)] rounded-full overflow-hidden">
             <div 
               className="h-full bg-[color:var(--accent)]"
               style={{ width: `${((currentIndex + 1) / words.length) * 100}%` }}
             />
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Finished state - show options */}
-      {isFinished && (
-        <div className="absolute bottom-16 sm:bottom-24 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4">
-          <div className="flex gap-3">
-            <button
-              onClick={handleReplay}
-              className="px-6 py-3 bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl font-medium hover:bg-[color:var(--surface-hover)] transition-colors flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Replay
-            </button>
+        {/* Finished state - fade in */}
+        {isFinished && (
+          <div 
+            className="flex flex-col items-center gap-4 animate-fadeIn"
+            style={{
+              animation: 'fadeIn 0.5s ease-out forwards',
+            }}
+          >
+            <div className="flex gap-3">
+              <button
+                onClick={handleReplay}
+                className="px-6 py-3 bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl font-medium hover:bg-[color:var(--surface-hover)] transition-colors flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Replay
+              </button>
+              <Link
+                href="/"
+                className="px-6 py-3 bg-[color:var(--accent)] text-white rounded-xl font-semibold hover:opacity-90 transition-opacity"
+              >
+                Try it yourself →
+              </Link>
+            </div>
             <Link
-              href="/"
-              className="px-6 py-3 bg-[color:var(--accent)] text-white rounded-xl font-semibold hover:opacity-90 transition-opacity"
+              href="/library"
+              className="text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors text-sm"
             >
-              Try it yourself →
+              or browse the library
             </Link>
           </div>
-          <Link
-            href="/library"
-            className="text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors text-sm"
-          >
-            or browse the library
-          </Link>
-        </div>
-      )}
+        )}
+      </div>
+
+      {/* Inline keyframes for fade animation */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   )
 }
