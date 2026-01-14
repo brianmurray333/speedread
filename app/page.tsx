@@ -1,20 +1,43 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Header from '@/components/Header'
 import PDFUploader from '@/components/PDFUploader'
 import SpeedReader from '@/components/SpeedReader'
+import IntroReader from '@/components/IntroReader'
 import Link from 'next/link'
 
 export default function Home() {
   const [words, setWords] = useState<string[]>([])
   const [title, setTitle] = useState<string>('')
   const [isReading, setIsReading] = useState(false)
+  const [showIntro, setShowIntro] = useState<boolean | null>(null)
+
+  // Check if user has seen the intro before
+  useEffect(() => {
+    const hasSeenIntro = localStorage.getItem('speedread-intro-seen')
+    setShowIntro(!hasSeenIntro)
+  }, [])
+
+  const handleIntroComplete = () => {
+    localStorage.setItem('speedread-intro-seen', 'true')
+    setShowIntro(false)
+  }
 
   const handleTextExtracted = (extractedWords: string[], docTitle: string) => {
     setWords(extractedWords)
     setTitle(docTitle)
     setIsReading(true)
+  }
+
+  // Show nothing while checking localStorage (prevents flash)
+  if (showIntro === null) {
+    return null
+  }
+
+  // Show intro for first-time visitors
+  if (showIntro) {
+    return <IntroReader onComplete={handleIntroComplete} />
   }
 
   if (isReading && words.length > 0) {
