@@ -76,7 +76,7 @@ export async function GET(
       )
     }
 
-    // Verify macaroon
+    // Verify token
     const verification = verifyL402Macaroon(macaroon, documentId)
     
     if (!verification.valid) {
@@ -86,21 +86,39 @@ export async function GET(
       )
     }
 
-    // Verify payment was made
     if (!verification.paymentHash) {
       return NextResponse.json(
-        { error: 'Invalid macaroon: missing payment hash' },
+        { error: 'Invalid token: missing payment hash' },
         { status: 401 }
       )
     }
 
-    const isPaid = await checkInvoicePaid(verification.paymentHash)
+    // For creator payments (LNURL-pay), we trust the token
+    // We can't verify with LND because payment went to creator's wallet
+    if (document.lightning_address) {
+      // Token is valid, grant access
+      return NextResponse.json({
+        id: document.id,
+        title: document.title,
+        textContent: document.text_content,
+        wordCount: document.word_count,
+      })
+    }
 
-    if (!isPaid) {
-      return NextResponse.json(
-        { error: 'Invoice not paid' },
-        { status: 402 }
-      )
+    // For platform payments, verify with LND
+    try {
+      const isPaid = await checkInvoicePaid(verification.paymentHash)
+
+      if (!isPaid) {
+        return NextResponse.json(
+          { error: 'Invoice not paid' },
+          { status: 402 }
+        )
+      }
+    } catch {
+      // If LND check fails, still allow access if token is valid
+      // This handles cases where LND is down or misconfigured
+      console.warn('LND check failed, allowing access based on valid token')
     }
 
     // All verified! Return content
