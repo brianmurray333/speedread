@@ -216,9 +216,9 @@ export default function LibraryPage() {
                   )}
                   
                   <div className="flex items-center gap-3 sm:gap-4 w-full">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[color:var(--accent)]/10 flex items-center justify-center">
+                    <div className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-[color:var(--accent)]/10 flex items-center justify-center">
                       <svg 
-                        className="w-5 h-5 text-[color:var(--accent)]" 
+                        className="w-6 h-6 sm:w-7 sm:h-7 text-[color:var(--accent)]" 
                         fill="none" 
                         stroke="currentColor" 
                         strokeWidth="2" 
@@ -227,11 +227,14 @@ export default function LibraryPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                       </svg>
                     </div>
-                    <div className="flex-1 min-w-0 pr-12 sm:pr-16">
-                      <h3 className="font-semibold truncate hover:text-[color:var(--accent)] transition-colors text-sm sm:text-base">
+                    <div className="flex-1 min-w-0 pt-1">
+                      <h3 
+                        className="font-semibold line-clamp-2 hover:text-[color:var(--accent)] transition-colors text-sm sm:text-base leading-tight"
+                        title={doc.title}
+                      >
                         {doc.title}
                       </h3>
-                      <p className="text-[color:var(--muted)] text-xs sm:text-sm">
+                      <p className="text-[color:var(--muted)] text-xs sm:text-sm mt-1">
                         {doc.word_count.toLocaleString()} words
                         {doc.creator_name && (
                           <span className="ml-1 sm:ml-2">• {doc.creator_name}</span>
