@@ -177,6 +177,19 @@ export default function SpeedReader({
       onTouchStart={handleInteraction}
       onClick={handleInteraction}
     >
+      {/* Exit button - top right */}
+      <button
+        onClick={onExit}
+        className={`absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-full bg-[color:var(--surface)] border border-[color:var(--border)] hover:bg-[color:var(--surface-hover)] transition-all duration-300 ${
+          showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        aria-label="Exit"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
       {/* Countdown display - top of screen, horizontally centered */}
       {countdown !== null && (
         <div className="absolute top-12 left-0 right-0 flex justify-center pointer-events-none">
@@ -289,19 +302,11 @@ export default function SpeedReader({
               </svg>
             )}
           </button>
-
-          {/* Exit */}
-          <button
-            onClick={onExit}
-            className="btn-secondary"
-          >
-            Exit
-          </button>
         </div>
 
         {/* Keyboard shortcuts hint */}
         <p className="text-center text-[color:var(--muted)] text-sm mt-4">
-          Space: play/pause • ←→: navigate • ↑↓: speed • R: restart • Esc: exit
+          Space: play/pause • ←→: navigate • ↑↓: speed
         </p>
 
         {/* Word count */}
