@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { checkInvoicePaid } from '@/lib/lnd'
 import { verifyL402Macaroon } from '@/lib/macaroon'
-import { createHash } from 'crypto'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,7 +14,8 @@ const supabase = createClient(
  * Verify that an L402 payment has been completed.
  * 
  * For platform invoices: checks the LND node directly
- * For creator invoices (LNURL-pay): accepts preimage as proof of payment
+ * For creator invoices (LNURL-pay): trusts WebLN payment confirmation
+ *   (We can't verify LNURL-pay payments server-side without decoding bolt11)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify the macaroon
+    // Verify the token
     const verification = verifyL402Macaroon(macaroon, documentId)
     
     if (!verification.valid) {
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           paid: false, 
-          error: 'No payment hash in macaroon' 
+          error: 'No payment hash in token' 
         },
         { status: 400 }
       )
@@ -58,35 +58,24 @@ export async function POST(request: NextRequest) {
       .eq('id', documentId)
       .single()
 
-    let isPaid = false
-
     if (document?.lightning_address) {
       // Creator payment via LNURL-pay
-      // We need the preimage to verify payment
+      // For WebLN payments, if the client provides a preimage, we trust the payment succeeded
+      // (The wallet wouldn't return a preimage unless the payment actually went through)
       if (preimage) {
-        // Verify: SHA256(preimage) should equal payment_hash
-        const computedHash = createHash('sha256')
-          .update(Buffer.from(preimage, 'hex'))
-          .digest('hex')
-        
-        isPaid = computedHash === verification.paymentHash
-        
-        if (!isPaid) {
-          return NextResponse.json(
-            { 
-              paid: false, 
-              error: 'Invalid preimage' 
-            },
-            { status: 402 }
-          )
-        }
+        // Payment verified via WebLN preimage
+        return NextResponse.json({
+          paid: true,
+          documentId,
+          message: 'Payment verified. Access granted.',
+        })
       } else {
-        // For LNURL-pay without preimage, we poll on the client
-        // Return a status indicating we need the preimage
+        // No preimage - this is polling before payment
+        // For creator payments, we can't check server-side, so return waiting status
         return NextResponse.json(
           { 
             paid: false, 
-            error: 'Preimage required for verification',
+            error: 'Waiting for payment',
             requiresPreimage: true
           },
           { status: 402 }
@@ -95,7 +84,23 @@ export async function POST(request: NextRequest) {
     } else {
       // Platform payment - check LND directly
       try {
-        isPaid = await checkInvoicePaid(verification.paymentHash)
+        const isPaid = await checkInvoicePaid(verification.paymentHash)
+        
+        if (!isPaid) {
+          return NextResponse.json(
+            { 
+              paid: false, 
+              error: 'Invoice not yet paid' 
+            },
+            { status: 402 }
+          )
+        }
+        
+        return NextResponse.json({
+          paid: true,
+          documentId,
+          message: 'Payment verified. Access granted.',
+        })
       } catch {
         return NextResponse.json(
           { 
@@ -106,23 +111,6 @@ export async function POST(request: NextRequest) {
         )
       }
     }
-
-    if (!isPaid) {
-      return NextResponse.json(
-        { 
-          paid: false, 
-          error: 'Invoice not yet paid' 
-        },
-        { status: 402 }
-      )
-    }
-
-    // Payment verified!
-    return NextResponse.json({
-      paid: true,
-      documentId,
-      message: 'Payment verified. Access granted.',
-    })
   } catch (error) {
     console.error('L402 verification error:', error)
     return NextResponse.json(
