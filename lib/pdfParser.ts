@@ -1,9 +1,17 @@
 export function parseTextToWords(text: string): string[] {
-  // Split by whitespace and filter empty strings
+  // Split by whitespace and filter out:
+  // - Empty strings
+  // - Pure symbols/special characters (no letters or numbers)
+  // - Very short non-word tokens
   return text
     .split(/\s+/)
-    .filter(word => word.length > 0)
     .map(word => word.trim())
+    .filter(word => {
+      if (word.length === 0) return false
+      // Must contain at least one letter or number
+      if (!/[a-zA-Z0-9]/.test(word)) return false
+      return true
+    })
 }
 
 export function calculateORP(word: string): number {

@@ -200,10 +200,19 @@ export default function SpeedReader({
           showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
-        {/* Progress bar */}
-        <div className="progress-bar mb-6 max-w-2xl mx-auto">
+        {/* Progress bar - clickable to seek */}
+        <div 
+          className="progress-bar mb-6 max-w-2xl mx-auto cursor-pointer"
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect()
+            const clickX = e.clientX - rect.left
+            const percentage = clickX / rect.width
+            const newIndex = Math.floor(percentage * words.length)
+            setCurrentIndex(Math.max(0, Math.min(newIndex, words.length - 1)))
+          }}
+        >
           <div 
-            className="progress-fill" 
+            className="progress-fill pointer-events-none" 
             style={{ width: `${progress}%` }}
           />
         </div>
