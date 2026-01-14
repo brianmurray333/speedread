@@ -24,11 +24,10 @@ export default function IntroReader({ onComplete }: IntroReaderProps) {
   const [hasStarted, setHasStarted] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [wordKey, setWordKey] = useState(0)
   const [wpm, setWpm] = useState(SPEED_SCHEDULE[0][1])
 
   const words = INTRO_TEXT.split(/\s+/).filter(w => w.length > 0)
-  const currentWord = words[currentIndex] || ''
+  const currentWord = hasStarted ? (words[currentIndex] || '') : 'This'
   const orpIndex = calculateORP(currentWord)
 
   // Calculate interval from WPM
@@ -68,7 +67,6 @@ export default function IntroReader({ onComplete }: IntroReaderProps) {
           }, 1000)
           return prev
         }
-        setWordKey(k => k + 1)
         return prev + 1
       })
     }, interval)
@@ -93,88 +91,69 @@ export default function IntroReader({ onComplete }: IntroReaderProps) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [hasStarted, handleStart])
 
-  // Render word with highlighted ORP
-  const renderWord = (word: string, orp: number) => {
-    if (!word) return null
+  // Render word with ORP at fixed center position (same as SpeedReader)
+  const renderWord = () => {
+    if (!currentWord) return null
 
-    const before = word.slice(0, orp)
-    const orpChar = word[orp] || ''
-    const after = word.slice(orp + 1)
+    const before = currentWord.slice(0, orpIndex)
+    const orp = currentWord[orpIndex] || ''
+    const after = currentWord.slice(orpIndex + 1)
 
     return (
-      <span key={wordKey} className="word-animate inline-flex items-baseline">
-        <span className="text-[color:var(--foreground)]">{before}</span>
-        <span className="text-[color:var(--accent)] font-semibold">{orpChar}</span>
-        <span className="text-[color:var(--foreground)]">{after}</span>
-      </span>
+      <div className="w-full flex justify-center">
+        <span className="text-[color:var(--foreground)] text-right inline-block" style={{ minWidth: '40%' }}>
+          {before}
+        </span>
+        <span className="text-[color:var(--accent)] font-semibold">{orp}</span>
+        <span className="text-[color:var(--foreground)] text-left inline-block" style={{ minWidth: '40%' }}>
+          {after}
+        </span>
+      </div>
     )
   }
 
-  // Initial state: Show "This" with play button
-  if (!hasStarted) {
-    return (
-      <div className="fixed inset-0 bg-[color:var(--background)] flex flex-col items-center justify-center">
-        <div className="text-center">
-          {/* The word "This" with ORP */}
-          <div 
-            className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-normal tracking-wide mb-16"
-            style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif' }}
-          >
-            <span>T</span>
-            <span className="text-[color:var(--accent)] font-semibold">h</span>
-            <span>is</span>
-          </div>
+  return (
+    <div className="fixed inset-0 bg-[color:var(--background)] flex flex-col items-center justify-center">
+      {/* Word Display - same position whether started or not */}
+      <div className="flex-1 flex items-center justify-center w-full">
+        <div 
+          className="w-full max-w-4xl px-4 text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-normal tracking-wide"
+          style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif' }}
+        >
+          {renderWord()}
+        </div>
+      </div>
 
-          {/* Play button */}
+      {/* Play button - only show before started */}
+      {!hasStarted && (
+        <div className="absolute bottom-24">
           <button
             onClick={handleStart}
-            className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[color:var(--accent)] text-white flex items-center justify-center hover:opacity-90 transition-all hover:scale-105 shadow-lg"
+            className="w-14 h-14 rounded-full bg-[color:var(--accent)] text-white flex items-center justify-center hover:opacity-90 transition-all hover:scale-105"
             aria-label="Start intro"
           >
             <svg 
-              className="w-10 h-10 sm:w-12 sm:h-12 ml-1" 
+              className="w-6 h-6 ml-0.5" 
               fill="currentColor" 
               viewBox="0 0 24 24"
             >
               <path d="M8 5v14l11-7z" />
             </svg>
           </button>
-
-          <p className="text-[color:var(--muted)] mt-8 text-sm">
-            Press play or hit Space
-          </p>
         </div>
-      </div>
-    )
-  }
+      )}
 
-  // Reading state
-  return (
-    <div className="fixed inset-0 bg-[color:var(--background)] flex flex-col items-center justify-center">
-      {/* Word Display */}
-      <div className="flex-1 flex items-center justify-center w-full">
-        <div className="text-center px-8">
-          <div 
-            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-normal tracking-wide"
-            style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif' }}
-          >
-            {renderWord(currentWord, orpIndex)}
+      {/* Progress indicator - only show after started */}
+      {hasStarted && (
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
+          <div className="w-48 h-1 bg-[color:var(--border)] rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-[color:var(--accent)]"
+              style={{ width: `${((currentIndex + 1) / words.length) * 100}%` }}
+            />
           </div>
         </div>
-      </div>
-
-      {/* Minimal progress indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
-        <div className="w-48 h-1 bg-[color:var(--border)] rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-[color:var(--accent)] transition-all duration-100"
-            style={{ width: `${((currentIndex + 1) / words.length) * 100}%` }}
-          />
-        </div>
-        <p className="text-[color:var(--muted)] text-xs mt-3 text-center">
-          {wpm} WPM
-        </p>
-      </div>
+      )}
     </div>
   )
 }
