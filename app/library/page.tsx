@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase, Document } from '@/lib/supabase'
+import { getSupabase, Document } from '@/lib/supabase'
 import Header from '@/components/Header'
 import SpeedReader from '@/components/SpeedReader'
 import PaymentModal from '@/components/PaymentModal'
@@ -37,7 +37,7 @@ export default function LibraryPage() {
 
   const fetchDocuments = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('documents')
         .select('*')
         .eq('is_public', true)

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 import { isValidLightningAddress, validateLightningAddress } from '@/lib/lnurl'
 
 interface PublishModalProps {
@@ -89,7 +89,7 @@ export default function PublishModal({
     setPublishing(true)
 
     try {
-      const { error: dbError } = await supabase.from('documents').insert({
+      const { error: dbError } = await getSupabase().from('documents').insert({
         title: docTitle.trim(),
         text_content: textContent,
         word_count: wordCount,

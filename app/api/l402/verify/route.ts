@@ -3,10 +3,12 @@ import { createClient } from '@supabase/supabase-js'
 import { checkInvoicePaid } from '@/lib/lnd'
 import { verifyL402Macaroon } from '@/lib/macaroon'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
 /**
  * POST /api/l402/verify
@@ -52,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if document uses creator's Lightning Address
-    const { data: document } = await supabase
+    const { data: document } = await getSupabase()
       .from('documents')
       .select('lightning_address')
       .eq('id', documentId)

@@ -4,10 +4,12 @@ import { createInvoice } from '@/lib/lnd'
 import { requestInvoiceFromLightningAddress } from '@/lib/lnurl'
 import { createL402Macaroon, buildL402Challenge } from '@/lib/macaroon'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
 /**
  * POST /api/l402/challenge
@@ -30,7 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch document to get price and lightning address
-    const { data: document, error } = await supabase
+    const { data: document, error } = await getSupabase()
       .from('documents')
       .select('id, title, price_sats, lightning_address, creator_name')
       .eq('id', documentId)

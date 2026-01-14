@@ -3,10 +3,12 @@ import { createClient } from '@supabase/supabase-js'
 import { checkInvoicePaid } from '@/lib/lnd'
 import { verifyL402Macaroon, parseL402Header } from '@/lib/macaroon'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
 /**
  * GET /api/documents/[id]/content
@@ -27,7 +29,7 @@ export async function GET(
 
   try {
     // Fetch document
-    const { data: document, error } = await supabase
+    const { data: document, error } = await getSupabase()
       .from('documents')
       .select('*')
       .eq('id', documentId)
