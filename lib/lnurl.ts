@@ -84,6 +84,13 @@ export async function requestInvoiceFromLightningAddress(
   const amountMsats = amountSats * 1000
 
   // Validate amount is within bounds
+  // Note: maxSendable of 0 means the wallet can't receive yet (no inbound liquidity)
+  if (payInfo.maxSendable === 0) {
+    throw new Error(
+      `Lightning Address cannot receive payments yet (no inbound liquidity). The wallet owner needs to set up channels.`
+    )
+  }
+  
   if (amountMsats < payInfo.minSendable || amountMsats > payInfo.maxSendable) {
     throw new Error(
       `Amount must be between ${payInfo.minSendable / 1000} and ${payInfo.maxSendable / 1000} sats`

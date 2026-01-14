@@ -204,9 +204,10 @@ export default function LibraryPage() {
                           Paid
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[color:var(--accent)]/10 text-[color:var(--accent)] border border-[color:var(--accent)]/20">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[#F7931A]/10 text-[#F7931A] border border-[#F7931A]/20">
+                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12.5 8.8v-1.2h-1v1.15c-.26.02-.53.06-.78.12V7.6h-1v1.4c-.83.25-1.47.71-1.47 1.58 0 .9.67 1.38 1.47 1.58v2.2c-.45-.08-.89-.26-1.25-.52l-.5.87c.5.35 1.12.58 1.75.67v1.02h1v-.97c.26-.02.52-.05.78-.1v1.07h1v-1.2c1.18-.25 1.97-.87 1.97-1.88 0-1.06-.79-1.56-1.97-1.8V9.4c.35.07.68.2.97.38l.45-.85c-.4-.26-.9-.44-1.42-.53zm-1.78 1.05v1.87c-.5-.14-.72-.36-.72-.7 0-.37.22-.58.72-.72zm1.06 4.8v-1.97c.57.16.82.4.82.76 0 .42-.25.65-.82.76z"/>
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
                           </svg>
                           {doc.price_sats} sats
                         </span>

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { Book } from 'lucide-react'
 import { useTheme } from './ThemeProvider'
 
 export default function Header() {
@@ -10,6 +11,7 @@ export default function Header() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-[color:var(--background)]/80 backdrop-blur-md border-b border-[color:var(--border)]">
       <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group">
+          <Book className="w-7 h-7 text-[color:var(--accent)]" />
           <span className="text-2xl font-bold">
             <span className="text-[color:var(--foreground)]">speed</span>
             <span className="text-[color:var(--accent)]">read</span>
