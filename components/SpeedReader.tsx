@@ -10,7 +10,8 @@ interface SpeedReaderProps {
   content?: ContentItem[]
   initialWpm?: number
   autoStart?: boolean  // If true, show countdown and autoplay
-  documentId?: string  // If provided, enables share button
+  documentId?: string  // If provided, copies share link directly
+  onRequestPublish?: () => void  // Called when user wants to share unsaved content
   onComplete?: () => void
   onExit?: () => void
 }
@@ -21,6 +22,7 @@ export default function SpeedReader({
   initialWpm = 300, 
   autoStart = false,
   documentId,
+  onRequestPublish,
   onComplete,
   onExit 
 }: SpeedReaderProps) {
@@ -48,17 +50,22 @@ export default function SpeedReader({
 
   // Handle share button click
   const handleShare = useCallback(async () => {
-    if (!documentId) return
-    
-    const shareUrl = `${window.location.origin}/library?read=${documentId}`
-    try {
-      await navigator.clipboard.writeText(shareUrl)
-      setShowCopied(true)
-      setTimeout(() => setShowCopied(false), 2000)
-    } catch (e) {
-      console.error('Failed to copy link:', e)
+    if (documentId) {
+      // Already published - copy share link
+      const shareUrl = `${window.location.origin}/library?read=${documentId}`
+      try {
+        await navigator.clipboard.writeText(shareUrl)
+        setShowCopied(true)
+        setTimeout(() => setShowCopied(false), 2000)
+      } catch (e) {
+        console.error('Failed to copy link:', e)
+      }
+    } else if (onRequestPublish) {
+      // Not published yet - trigger publish flow
+      setIsPlaying(false)
+      onRequestPublish()
     }
-  }, [documentId])
+  }, [documentId, onRequestPublish])
 
   // Calculate interval from WPM
   const interval = Math.round(60000 / wpm)
@@ -140,7 +147,7 @@ export default function SpeedReader({
     if ((isPlaying || countdown !== null) && !waitingForImageClick) {
       hideControlsTimeout.current = setTimeout(() => {
         setShowControls(false)
-      }, 2000)
+      }, 1000)
     }
   }, [isPlaying, countdown, waitingForImageClick])
 
@@ -327,12 +334,12 @@ export default function SpeedReader({
       <div className={`absolute top-6 right-6 flex items-center gap-2 transition-all duration-300 ${
         showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}>
-        {/* Share button */}
-        {documentId && (
+        {/* Share button - shown when document is shareable OR can be published */}
+        {(documentId || onRequestPublish) && (
           <button
             onClick={handleShare}
             className="relative w-10 h-10 flex items-center justify-center rounded-full bg-[color:var(--surface)] border border-[color:var(--border)] hover:bg-[color:var(--surface-hover)] transition-colors"
-            aria-label="Share"
+            aria-label={documentId ? "Share" : "Publish to share"}
           >
             {showCopied ? (
               <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">

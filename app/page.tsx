@@ -79,19 +79,39 @@ export default function Home() {
   }
 
   if (isReading && (content.length > 0 || words.length > 0)) {
-  return (
-      <SpeedReader
-        content={content.length > 0 ? content : undefined}
-        words={content.length === 0 ? words : undefined}
-        onComplete={() => {}}
-        onExit={() => {
-          setIsReading(false)
-          setWords([])
-          setContent([])
-          setTitle('')
-          setTextContent('')
-        }}
-      />
+    return (
+      <>
+        <SpeedReader
+          content={content.length > 0 ? content : undefined}
+          words={content.length === 0 ? words : undefined}
+          onComplete={() => {}}
+          onRequestPublish={() => setShowPublishModal(true)}
+          onExit={() => {
+            setIsReading(false)
+            setWords([])
+            setContent([])
+            setTitle('')
+            setTextContent('')
+          }}
+        />
+        {/* Publish Modal overlay for sharing local content */}
+        <PublishModal
+          isOpen={showPublishModal}
+          onClose={() => setShowPublishModal(false)}
+          onPublished={() => {
+            setShowPublishModal(false)
+            setIsReading(false)
+            setWords([])
+            setContent([])
+            setTitle('')
+            setTextContent('')
+            alert('Published successfully! Your document is now in the library.')
+          }}
+          title={title}
+          textContent={textContent}
+          wordCount={words.length}
+        />
+      </>
     )
   }
 
