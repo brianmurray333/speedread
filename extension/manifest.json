@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "SpeedRead",
+  "version": "1.0.0",
+  "description": "Speed read any text on the web using RSVP with Optimal Recognition Point highlighting",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": [
+    "activeTab",
+    "contextMenus",
+    "storage",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["speedreader.js", "content.js", "speedreader.css"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "commands": {
+    "speedread-selection": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "SpeedRead selected text"
+    }
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "SpeedRead - Select text first"
+  }
+}

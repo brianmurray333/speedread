@@ -1,0 +1,583 @@
+/* SpeedRead Chrome Extension - Styles */
+
+/* CSS Variables for theming */
+.speedread-reader {
+  /* Light mode (default) */
+  --sr-background: #FFFEF9;
+  --sr-foreground: #2D2D2D;
+  --sr-accent: #F7931A;
+  --sr-surface: #F8F7F2;
+  --sr-surface-hover: #F0EFE8;
+  --sr-border: #E5E3DC;
+  --sr-muted: #6B6B6B;
+  --sr-progress-bg: #E5E3DC;
+  --sr-progress-fill: #F7931A;
+}
+
+.speedread-reader.dark {
+  /* Dark mode */
+  --sr-background: #1A1A1A;
+  --sr-foreground: #E8E6E3;
+  --sr-accent: #F7931A;
+  --sr-surface: #242424;
+  --sr-surface-hover: #2E2E2E;
+  --sr-border: #3A3A3A;
+  --sr-muted: #9A9A9A;
+  --sr-progress-bg: #3A3A3A;
+  --sr-progress-fill: #F7931A;
+}
+
+/* Overlay container */
+.speedread-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 2147483647 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+/* Main reader container */
+.speedread-reader {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: var(--sr-background) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif !important;
+  color: var(--sr-foreground) !important;
+  transition: background-color 0.3s ease, color 0.3s ease !important;
+}
+
+/* Notification toast */
+.speedread-notification {
+  position: fixed !important;
+  top: 20px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  background: #333 !important;
+  color: white !important;
+  padding: 12px 24px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-family: system-ui, -apple-system, sans-serif !important;
+  z-index: 2147483647 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+  opacity: 1 !important;
+  transition: opacity 0.3s ease !important;
+}
+
+.speedread-notification-fade {
+  opacity: 0 !important;
+}
+
+/* Top buttons container */
+.speedread-top-buttons {
+  position: absolute !important;
+  top: 24px !important;
+  right: 24px !important;
+  display: flex !important;
+  gap: 8px !important;
+  align-items: center !important;
+  transition: opacity 0.3s ease !important;
+}
+
+/* Share button */
+.speedread-share-btn {
+  width: 40px !important;
+  height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
+  background: var(--sr-surface) !important;
+  border: 1px solid var(--sr-border) !important;
+  color: var(--sr-foreground) !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.speedread-share-btn:hover {
+  background: var(--sr-surface-hover) !important;
+}
+
+/* Exit button */
+.speedread-exit {
+  width: 40px !important;
+  height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
+  background: var(--sr-surface) !important;
+  border: 1px solid var(--sr-border) !important;
+  color: var(--sr-foreground) !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.speedread-exit:hover {
+  background: var(--sr-surface-hover) !important;
+}
+
+/* Publish Modal */
+.speedread-publish-modal {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: blur(4px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 100 !important;
+}
+
+.speedread-publish-content {
+  background: var(--sr-surface) !important;
+  border: 1px solid var(--sr-border) !important;
+  border-radius: 16px !important;
+  padding: 24px !important;
+  max-width: 400px !important;
+  width: 90% !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+}
+
+.speedread-publish-content h2 {
+  margin: 0 0 4px 0 !important;
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  color: var(--sr-foreground) !important;
+}
+
+.speedread-publish-subtitle {
+  margin: 0 0 20px 0 !important;
+  font-size: 14px !important;
+  color: var(--sr-muted) !important;
+}
+
+.speedread-publish-field {
+  margin-bottom: 16px !important;
+}
+
+.speedread-publish-field label {
+  display: block !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: var(--sr-foreground) !important;
+  margin-bottom: 8px !important;
+}
+
+.speedread-publish-title {
+  width: 100% !important;
+  padding: 12px 16px !important;
+  background: var(--sr-background) !important;
+  border: 1px solid var(--sr-border) !important;
+  border-radius: 8px !important;
+  color: var(--sr-foreground) !important;
+  font-size: 14px !important;
+  outline: none !important;
+  transition: border-color 0.2s ease !important;
+  box-sizing: border-box !important;
+}
+
+.speedread-publish-title:focus {
+  border-color: var(--sr-accent) !important;
+}
+
+.speedread-publish-title::placeholder {
+  color: var(--sr-muted) !important;
+}
+
+.speedread-publish-info {
+  display: flex !important;
+  gap: 8px !important;
+  font-size: 13px !important;
+  color: var(--sr-muted) !important;
+  margin-bottom: 16px !important;
+}
+
+.speedread-publish-error {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  color: #ef4444 !important;
+  padding: 12px !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  margin-bottom: 16px !important;
+}
+
+.speedread-publish-buttons {
+  display: flex !important;
+  gap: 12px !important;
+  justify-content: flex-end !important;
+}
+
+.speedread-publish-cancel {
+  padding: 10px 20px !important;
+  background: var(--sr-surface) !important;
+  border: 1px solid var(--sr-border) !important;
+  border-radius: 8px !important;
+  color: var(--sr-foreground) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: background 0.2s ease !important;
+}
+
+.speedread-publish-cancel:hover {
+  background: var(--sr-surface-hover) !important;
+}
+
+.speedread-publish-submit {
+  padding: 10px 20px !important;
+  background: var(--sr-accent) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  color: white !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: opacity 0.2s ease !important;
+}
+
+.speedread-publish-submit:hover {
+  opacity: 0.9 !important;
+}
+
+/* Paywall Section */
+.speedread-paywall-section {
+  background: var(--sr-background) !important;
+  border: 1px solid var(--sr-border) !important;
+  border-radius: 12px !important;
+  padding: 16px !important;
+  margin-bottom: 16px !important;
+}
+
+.speedread-paywall-toggle {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.speedread-paywall-label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.speedread-paywall-label svg {
+  color: var(--sr-accent) !important;
+  flex-shrink: 0 !important;
+}
+
+.speedread-paywall-title {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: var(--sr-foreground) !important;
+}
+
+.speedread-paywall-desc {
+  font-size: 12px !important;
+  color: var(--sr-muted) !important;
+}
+
+/* Toggle Button */
+.speedread-toggle-btn {
+  width: 48px !important;
+  height: 28px !important;
+  border-radius: 14px !important;
+  background: var(--sr-border) !important;
+  border: none !important;
+  cursor: pointer !important;
+  position: relative !important;
+  transition: background 0.2s ease !important;
+  padding: 0 !important;
+}
+
+.speedread-toggle-btn[data-enabled="true"] {
+  background: var(--sr-accent) !important;
+}
+
+.speedread-toggle-knob {
+  position: absolute !important;
+  top: 4px !important;
+  left: 4px !important;
+  width: 20px !important;
+  height: 20px !important;
+  border-radius: 50% !important;
+  background: white !important;
+  transition: transform 0.2s ease !important;
+}
+
+.speedread-toggle-btn[data-enabled="true"] .speedread-toggle-knob {
+  transform: translateX(20px) !important;
+}
+
+/* Paywall Options */
+.speedread-paywall-options {
+  margin-top: 16px !important;
+  padding-top: 16px !important;
+  border-top: 1px solid var(--sr-border) !important;
+}
+
+.speedread-field-hint {
+  display: block !important;
+  font-size: 11px !important;
+  color: var(--sr-muted) !important;
+  margin-top: 4px !important;
+}
+
+.speedread-publish-price,
+.speedread-publish-lnaddress {
+  width: 100% !important;
+  padding: 12px 16px !important;
+  background: var(--sr-surface) !important;
+  border: 1px solid var(--sr-border) !important;
+  border-radius: 8px !important;
+  color: var(--sr-foreground) !important;
+  font-size: 14px !important;
+  outline: none !important;
+  transition: border-color 0.2s ease !important;
+  box-sizing: border-box !important;
+}
+
+.speedread-publish-price:focus,
+.speedread-publish-lnaddress:focus {
+  border-color: var(--sr-accent) !important;
+}
+
+.speedread-publish-price::placeholder,
+.speedread-publish-lnaddress::placeholder {
+  color: var(--sr-muted) !important;
+}
+
+/* Time remaining */
+.speedread-time {
+  position: absolute !important;
+  top: 24px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  font-size: 14px !important;
+  color: var(--sr-muted) !important;
+  transition: opacity 0.3s ease !important;
+}
+
+/* Word display container */
+.speedread-word-container {
+  position: relative !important;
+  width: 100% !important;
+  max-width: 900px !important;
+  min-height: 120px !important;
+  overflow: visible !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 16px !important;
+}
+
+/* Word display */
+.speedread-word {
+  display: inline-flex !important;
+  white-space: nowrap !important;
+  font-size: clamp(48px, 8vw, 96px) !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.02em !important;
+  line-height: 1.4 !important;
+  padding: 0.1em 0 !important;
+}
+
+/* Word parts */
+.speedread-before,
+.speedread-after {
+  color: var(--sr-foreground) !important;
+}
+
+.speedread-orp {
+  color: var(--sr-accent) !important;
+  font-weight: 600 !important;
+}
+
+.speedread-invisible {
+  visibility: hidden !important;
+}
+
+/* Fade masks - hidden since we're not clipping anymore */
+.speedread-fade-left,
+.speedread-fade-right {
+  display: none !important;
+}
+
+/* Controls container */
+.speedread-controls {
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  padding: 24px !important;
+  transition: opacity 0.3s ease !important;
+}
+
+.speedread-controls-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Progress bar container */
+.speedread-progress-container {
+  max-width: 600px !important;
+  margin: 0 auto 24px auto !important;
+  cursor: pointer !important;
+}
+
+/* Progress bar */
+.speedread-progress-bar {
+  height: 3px !important;
+  background: var(--sr-progress-bg) !important;
+  border-radius: 2px !important;
+  overflow: hidden !important;
+}
+
+.speedread-progress-fill {
+  height: 100% !important;
+  background: var(--sr-progress-fill) !important;
+  transition: width 0.1s linear !important;
+}
+
+/* Control buttons container */
+.speedread-buttons {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+/* WPM control */
+.speedread-wpm-control {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  background: var(--sr-surface) !important;
+  border-radius: 8px !important;
+  padding: 8px 16px !important;
+}
+
+.speedread-wpm-btn {
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  border: none !important;
+  color: var(--sr-foreground) !important;
+  font-size: 18px !important;
+  cursor: pointer !important;
+  transition: background 0.2s ease !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.speedread-wpm-btn:hover {
+  background: var(--sr-surface-hover) !important;
+}
+
+.speedread-wpm-display {
+  width: 80px !important;
+  text-align: center !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: var(--sr-foreground) !important;
+}
+
+/* Play button */
+.speedread-play-btn {
+  width: 48px !important;
+  height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+  background: var(--sr-accent) !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: opacity 0.2s ease !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.speedread-play-btn:hover {
+  opacity: 0.9 !important;
+}
+
+/* Secondary buttons */
+.speedread-restart-btn,
+.speedread-theme-btn {
+  width: 48px !important;
+  height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+  background: var(--sr-surface) !important;
+  border: 1px solid var(--sr-border) !important;
+  color: var(--sr-foreground) !important;
+  cursor: pointer !important;
+  transition: background 0.2s ease !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.speedread-restart-btn:hover,
+.speedread-theme-btn:hover {
+  background: var(--sr-surface-hover) !important;
+}
+
+/* Keyboard hints */
+.speedread-hints {
+  text-align: center !important;
+  font-size: 13px !important;
+  color: var(--sr-muted) !important;
+  margin: 16px 0 0 0 !important;
+  padding: 0 !important;
+}
+
+/* Word count */
+.speedread-word-count {
+  text-align: center !important;
+  font-size: 12px !important;
+  color: var(--sr-muted) !important;
+  margin: 8px 0 0 0 !important;
+  padding: 0 !important;
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
+  .speedread-hints {
+    display: none !important;
+  }
+  
+  .speedread-wpm-btn,
+  .speedread-play-btn,
+  .speedread-restart-btn,
+  .speedread-theme-btn {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+}
