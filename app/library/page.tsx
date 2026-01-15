@@ -239,7 +239,7 @@ function LibraryContent() {
               Public <span className="text-[color:var(--accent)]">Library</span>
             </h1>
             <p className="text-[color:var(--muted)] text-base sm:text-lg max-w-2xl mx-auto px-2">
-              Browse PDFs shared by the community. Tap any document to start speed reading.
+              Tap any document to start speed reading.
             </p>
           </div>
 
