@@ -1,15 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Header from '@/components/Header'
 import PDFUploader from '@/components/PDFUploader'
 import SpeedReader from '@/components/SpeedReader'
 import IntroReader from '@/components/IntroReader'
 import PublishModal from '@/components/PublishModal'
 import Link from 'next/link'
-import { ContentItem } from '@/lib/pdfParser'
+import { ContentItem, parseTextToContentItems } from '@/lib/pdfParser'
 
-export default function Home() {
+// Separate component that uses useSearchParams (needs Suspense boundary)
+function HomeContent() {
+  const searchParams = useSearchParams()
   const [words, setWords] = useState<string[]>([])
   const [content, setContent] = useState<ContentItem[]>([])
   const [title, setTitle] = useState<string>('')
@@ -18,12 +21,62 @@ export default function Home() {
   const [showIntro, setShowIntro] = useState<boolean | null>(null)
   const [showUploadOptions, setShowUploadOptions] = useState(false)
   const [showPublishModal, setShowPublishModal] = useState(false)
+  const [urlTextProcessed, setUrlTextProcessed] = useState(false)
+
+  // Generate a title from the first few words of text
+  const generateTitleFromText = (text: string): string => {
+    const textWords = text.trim().split(/\s+/).slice(0, 6)
+    let generatedTitle = textWords.join(' ')
+    if (generatedTitle.length > 50) {
+      generatedTitle = generatedTitle.substring(0, 47) + '...'
+    } else if (text.trim().split(/\s+/).length > 6) {
+      generatedTitle += '...'
+    }
+    return generatedTitle || 'Shared Text'
+  }
+
+  // Check for URL text parameter and auto-start reading
+  useEffect(() => {
+    if (urlTextProcessed) return
+    
+    const sharedText = searchParams.get('text')
+    if (sharedText && sharedText.trim().length > 0) {
+      setUrlTextProcessed(true)
+      
+      // Mark intro as seen for users coming via shortcut
+      localStorage.setItem('speedread-intro-seen', 'true')
+      
+      const trimmedText = sharedText.trim()
+      const contentItems = parseTextToContentItems(trimmedText)
+      const extractedWords = contentItems
+        .filter((item): item is { type: 'word'; value: string } => item.type === 'word')
+        .map(item => item.value)
+      
+      if (extractedWords.length >= 3) {
+        setContent(contentItems)
+        setWords(extractedWords)
+        setTitle(generateTitleFromText(trimmedText))
+        setTextContent(trimmedText)
+        setShowIntro(false)
+        // Auto-start reading immediately
+        setIsReading(true)
+        
+        // Clean up the URL without triggering a reload
+        if (typeof window !== 'undefined') {
+          window.history.replaceState({}, '', '/')
+        }
+      }
+    }
+  }, [searchParams, urlTextProcessed])
 
   // Check if user has seen the intro before
   useEffect(() => {
+    // Don't override if we already set showIntro from URL text
+    if (showIntro !== null) return
+    
     const hasSeenIntro = localStorage.getItem('speedread-intro-seen')
     setShowIntro(!hasSeenIntro)
-  }, [])
+  }, [showIntro])
 
   const handleIntroComplete = () => {
     localStorage.setItem('speedread-intro-seen', 'true')
@@ -270,9 +323,25 @@ export default function Home() {
             <Link href="/how-it-works" className="text-[color:var(--muted)] hover:text-[color:var(--foreground)]">
               How It Works
             </Link>
+            <Link href="/shortcuts" className="text-[color:var(--muted)] hover:text-[color:var(--foreground)]">
+              iOS Shortcuts
+            </Link>
           </div>
         </div>
       </footer>
     </div>
+  )
+}
+
+// Main export with Suspense boundary for useSearchParams
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[color:var(--background)] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-[color:var(--accent)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   )
 }
