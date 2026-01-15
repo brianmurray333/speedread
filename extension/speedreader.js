@@ -242,11 +242,31 @@ class SpeedReader {
     this.container.querySelector('.speedread-share-btn').addEventListener('click', () => this.handleShare());
     
     // Publish modal
-    this.container.querySelector('.speedread-publish-cancel').addEventListener('click', () => this.hidePublishModal());
-    this.container.querySelector('.speedread-publish-submit').addEventListener('click', () => this.handlePublish());
+    this.container.querySelector('.speedread-publish-cancel').addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.hidePublishModal();
+    });
+    this.container.querySelector('.speedread-publish-submit').addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.handlePublish();
+    });
     this.container.querySelector('.speedread-publish-title').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') this.handlePublish();
-      if (e.key === 'Escape') this.hidePublishModal();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.handlePublish();
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        this.hidePublishModal();
+      }
+    });
+    // Click backdrop to close modal
+    this.container.querySelector('.speedread-publish-modal').addEventListener('click', (e) => {
+      if (e.target.classList.contains('speedread-publish-modal')) {
+        this.hidePublishModal();
+      }
     });
     
     // Paywall toggle
