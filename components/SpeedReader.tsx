@@ -36,6 +36,7 @@ export default function SpeedReader({
   const [showControls, setShowControls] = useState(!autoStart) // Hide controls if autoStart
   const [countdown, setCountdown] = useState<number | null>(autoStart ? 3 : null)
   const [showCopied, setShowCopied] = useState(false)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [waitingForImageClick, setWaitingForImageClick] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const hideControlsTimeout = useRef<NodeJS.Timeout | null>(null)
@@ -95,13 +96,23 @@ export default function SpeedReader({
       try {
         await navigator.clipboard.writeText(shareUrl)
         setShowCopied(true)
-        setTimeout(() => setShowCopied(false), 2000)
+        setToastMessage('Link copied to clipboard')
+        setTimeout(() => {
+          setShowCopied(false)
+          setToastMessage(null)
+        }, 2000)
       } catch (e) {
         console.error('Failed to copy link:', e)
+        setToastMessage('Failed to copy link')
+        setTimeout(() => setToastMessage(null), 2000)
       }
     } else if (onRequestPublish) {
       // Not published yet - trigger publish flow
+      // First exit fullscreen so the modal can be visible
       setIsPlaying(false)
+      if (document.fullscreenElement) {
+        await document.exitFullscreen()
+      }
       onRequestPublish()
     }
   }, [documentId, onRequestPublish])
@@ -404,6 +415,18 @@ export default function SpeedReader({
           </svg>
         </button>
       </div>
+
+      {/* Toast notification */}
+      {toastMessage && (
+        <div className="absolute top-20 left-0 right-0 flex justify-center z-50 pointer-events-none">
+          <div className="bg-green-500/90 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-toast-in">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            {toastMessage}
+          </div>
+        </div>
+      )}
 
       {/* Countdown display - top of screen, horizontally centered */}
       {countdown !== null && (
