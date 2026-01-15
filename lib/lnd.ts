@@ -79,6 +79,8 @@ export async function createInvoice(
 
   // Convert base64 r_hash to hex for easier handling
   const paymentHash = Buffer.from(response.r_hash, 'base64').toString('hex')
+  
+  console.log('Invoice created - r_hash from LND:', response.r_hash, '-> hex:', paymentHash)
 
   return {
     paymentRequest: response.payment_request,
@@ -90,9 +92,18 @@ export async function createInvoice(
  * Check if an invoice has been paid
  */
 export async function checkInvoicePaid(paymentHashHex: string): Promise<boolean> {
-  // Use r_hash_str query param which accepts hex directly
+  // LND REST API expects base64url-encoded hash in path
+  // Convert hex to bytes, then to base64url (no padding)
+  const hashBytes = Buffer.from(paymentHashHex, 'hex')
+  const base64url = hashBytes.toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '') // Remove padding
+  
+  console.log('Looking up invoice - hex:', paymentHashHex, 'base64url:', base64url)
+  
   const response = await lndRequest<LookupInvoiceResponse>(
-    `/v1/invoice?r_hash_str=${paymentHashHex}`
+    `/v1/invoice/${base64url}`
   )
 
   return response.settled || response.state === 'SETTLED'
@@ -102,6 +113,11 @@ export async function checkInvoicePaid(paymentHashHex: string): Promise<boolean>
  * Get invoice details
  */
 export async function getInvoice(paymentHashHex: string): Promise<LookupInvoiceResponse> {
-  // Use r_hash_str query param which accepts hex directly
-  return lndRequest<LookupInvoiceResponse>(`/v1/invoice?r_hash_str=${paymentHashHex}`)
+  const hashBytes = Buffer.from(paymentHashHex, 'hex')
+  const base64url = hashBytes.toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+  
+  return lndRequest<LookupInvoiceResponse>(`/v1/invoice/${base64url}`)
 }
