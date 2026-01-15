@@ -484,16 +484,16 @@ export default function SpeedReader({
           {/* Play/Pause */}
           <button
             onClick={() => setIsPlaying(prev => !prev)}
-            className="btn-primary w-12 h-12 flex items-center justify-center"
+            className="btn-primary w-12 h-12 flex items-center justify-center text-white"
             aria-label={isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? (
-              <svg className="w-6 h-6" fill="#ffffff" viewBox="0 0 24 24">
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                 <rect x="6" y="4" width="4" height="16" rx="1" />
                 <rect x="14" y="4" width="4" height="16" rx="1" />
               </svg>
             ) : (
-              <svg className="w-6 h-6" fill="#ffffff" viewBox="0 0 24 24">
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z" />
               </svg>
             )}
@@ -506,10 +506,10 @@ export default function SpeedReader({
               setIsPlaying(false)
               setWaitingForImageClick(false)
             }}
-            className="btn-secondary w-12 h-12 flex items-center justify-center"
+            className="btn-secondary w-12 h-12 flex items-center justify-center text-[color:var(--foreground)]"
             aria-label="Restart"
           >
-            <svg className="w-5 h-5" fill="none" strokeWidth="2" viewBox="0 0 24 24" style={{ stroke: 'var(--foreground)' }}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </button>
@@ -517,16 +517,16 @@ export default function SpeedReader({
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className="btn-secondary w-12 h-12 flex items-center justify-center"
+            className="btn-secondary w-12 h-12 flex items-center justify-center text-[color:var(--foreground)]"
             aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {theme === 'dark' ? (
-              <svg className="w-5 h-5" fill="none" strokeWidth="2" viewBox="0 0 24 24" style={{ stroke: 'var(--foreground)' }}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="5" />
                 <path strokeLinecap="round" d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
               </svg>
             ) : (
-              <svg className="w-5 h-5" fill="none" strokeWidth="2" viewBox="0 0 24 24" style={{ stroke: 'var(--foreground)' }}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
               </svg>
             )}
@@ -535,15 +535,15 @@ export default function SpeedReader({
           {/* Fullscreen toggle */}
           <button
             onClick={toggleFullscreen}
-            className="btn-secondary w-12 h-12 flex items-center justify-center"
+            className="btn-secondary w-12 h-12 flex items-center justify-center text-[color:var(--foreground)]"
             aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
           >
             {isFullscreen ? (
-              <svg className="w-5 h-5" fill="none" strokeWidth="2" viewBox="0 0 24 24" style={{ stroke: 'var(--foreground)' }}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 9L4 4m0 0v4m0-4h4m6 6l5 5m0 0v-4m0 4h-4M9 15l-5 5m0 0v-4m0 4h4m6-6l5-5m0 0v4m0-4h-4" />
               </svg>
             ) : (
-              <svg className="w-5 h-5" fill="none" strokeWidth="2" viewBox="0 0 24 24" style={{ stroke: 'var(--foreground)' }}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5h-4m4 0v-4m0 4l-5-5" />
               </svg>
             )}
