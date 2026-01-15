@@ -72,10 +72,13 @@ export default function IntroReader({ onComplete }: IntroReaderProps) {
     return () => clearInterval(timer)
   }, [isPlaying, interval, words.length])
 
-  // Keyboard: space to start/pause
+  // Keyboard: space to start/pause, escape to skip
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === ' ') {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onComplete()
+      } else if (e.key === ' ') {
         e.preventDefault()
         if (isFinished) {
           onComplete()
