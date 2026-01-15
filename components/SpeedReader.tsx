@@ -36,8 +36,10 @@ export default function SpeedReader({
   const [countdown, setCountdown] = useState<number | null>(autoStart ? 3 : null)
   const [showCopied, setShowCopied] = useState(false)
   const [waitingForImageClick, setWaitingForImageClick] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const hideControlsTimeout = useRef<NodeJS.Timeout | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const hasEnteredFullscreen = useRef(false)
   const { theme, toggleTheme } = useTheme()
 
   const currentItem = contentItems[currentIndex]
@@ -47,6 +49,42 @@ export default function SpeedReader({
   const wordCount = contentItems.filter(item => item.type === 'word').length
   const wordsRead = contentItems.slice(0, currentIndex + 1).filter(item => item.type === 'word').length
   const progress = wordCount > 0 ? (wordsRead / wordCount) * 100 : 0
+
+  // Fullscreen toggle
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await containerRef.current?.requestFullscreen()
+      } else {
+        await document.exitFullscreen()
+      }
+    } catch (e) {
+      console.error('Fullscreen error:', e)
+    }
+  }, [])
+
+  // Listen for fullscreen changes (user can exit with Escape or browser controls)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
+
+  // Auto-enter fullscreen when component mounts (on user gesture via autoStart)
+  useEffect(() => {
+    if (autoStart && !hasEnteredFullscreen.current && containerRef.current) {
+      hasEnteredFullscreen.current = true
+      // Small delay to ensure the component is mounted
+      const timer = setTimeout(() => {
+        containerRef.current?.requestFullscreen().catch(() => {
+          // Fullscreen may fail if not triggered by user gesture, that's ok
+        })
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [autoStart])
 
   // Handle share button click
   const handleShare = useCallback(async () => {
@@ -216,7 +254,16 @@ export default function SpeedReader({
           setWpm(prev => Math.max(prev - 50, 50))
           break
         case 'Escape':
-          onExit?.()
+          if (document.fullscreenElement) {
+            document.exitFullscreen()
+          } else {
+            onExit?.()
+          }
+          break
+        case 'f':
+        case 'F':
+          e.preventDefault()
+          toggleFullscreen()
           break
         case 'r':
           setCurrentIndex(0)
@@ -228,7 +275,7 @@ export default function SpeedReader({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isPlaying, countdown, contentItems.length, onExit, handleInteraction, waitingForImageClick, handleImageContinue])
+  }, [isPlaying, countdown, contentItems.length, onExit, handleInteraction, waitingForImageClick, handleImageContinue, toggleFullscreen])
 
   // Render word with ORP at fixed center position
   const renderWord = () => {
@@ -437,23 +484,18 @@ export default function SpeedReader({
           {/* Play/Pause */}
           <button
             onClick={() => setIsPlaying(prev => !prev)}
-            className="btn-primary w-20 sm:w-24 flex items-center justify-center gap-1 sm:gap-2 py-3"
+            className="btn-primary w-12 h-12 flex items-center justify-center"
+            aria-label={isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? (
-              <>
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <rect x="6" y="4" width="4" height="16" rx="1" />
-                  <rect x="14" y="4" width="4" height="16" rx="1" />
-                </svg>
-                Pause
-              </>
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <rect x="6" y="4" width="4" height="16" rx="1" />
+                <rect x="14" y="4" width="4" height="16" rx="1" />
+              </svg>
             ) : (
-              <>
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-                Play
-              </>
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
             )}
           </button>
 
@@ -464,19 +506,19 @@ export default function SpeedReader({
               setIsPlaying(false)
               setWaitingForImageClick(false)
             }}
-            className="btn-secondary flex items-center gap-1 sm:gap-2 py-3 px-3 sm:px-4"
+            className="btn-secondary w-12 h-12 flex items-center justify-center"
             aria-label="Restart"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            <span className="hidden sm:inline">Restart</span>
           </button>
 
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className="btn-secondary flex items-center gap-2 py-3 px-3 sm:px-4"
+            className="btn-secondary w-12 h-12 flex items-center justify-center"
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {theme === 'dark' ? (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -489,11 +531,28 @@ export default function SpeedReader({
               </svg>
             )}
           </button>
+
+          {/* Fullscreen toggle */}
+          <button
+            onClick={toggleFullscreen}
+            className="btn-secondary w-12 h-12 flex items-center justify-center"
+            aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+          >
+            {isFullscreen ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 9L4 4m0 0v4m0-4h4m6 6l5 5m0 0v-4m0 4h-4M9 15l-5 5m0 0v-4m0 4h4m6-6l5-5m0 0v4m0-4h-4" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5h-4m4 0v-4m0 4l-5-5" />
+              </svg>
+            )}
+          </button>
         </div>
 
         {/* Keyboard shortcuts hint - desktop */}
         <p className="hidden sm:block text-center text-[color:var(--muted)] text-sm mt-4">
-          Space: play/pause • ←→: navigate • ↑↓: speed
+          Space: play/pause • ←→: navigate • ↑↓: speed • F: fullscreen
         </p>
         {/* Touch hint - mobile */}
         <p className="sm:hidden text-center text-[color:var(--muted)] text-sm mt-4">
