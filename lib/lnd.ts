@@ -92,18 +92,11 @@ export async function createInvoice(
  * Check if an invoice has been paid
  */
 export async function checkInvoicePaid(paymentHashHex: string): Promise<boolean> {
-  // LND REST API expects base64url-encoded hash in path
-  // Convert hex to bytes, then to base64url (no padding)
-  const hashBytes = Buffer.from(paymentHashHex, 'hex')
-  const base64url = hashBytes.toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '') // Remove padding
-  
-  console.log('Looking up invoice - hex:', paymentHashHex, 'base64url:', base64url)
+  // LND REST API /v1/invoice/{r_hash_str} expects hex directly
+  console.log('Looking up invoice with hex hash:', paymentHashHex)
   
   const response = await lndRequest<LookupInvoiceResponse>(
-    `/v1/invoice/${base64url}`
+    `/v1/invoice/${paymentHashHex}`
   )
 
   return response.settled || response.state === 'SETTLED'
@@ -113,11 +106,5 @@ export async function checkInvoicePaid(paymentHashHex: string): Promise<boolean>
  * Get invoice details
  */
 export async function getInvoice(paymentHashHex: string): Promise<LookupInvoiceResponse> {
-  const hashBytes = Buffer.from(paymentHashHex, 'hex')
-  const base64url = hashBytes.toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '')
-  
-  return lndRequest<LookupInvoiceResponse>(`/v1/invoice/${base64url}`)
+  return lndRequest<LookupInvoiceResponse>(`/v1/invoice/${paymentHashHex}`)
 }
