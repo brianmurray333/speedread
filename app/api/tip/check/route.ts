@@ -4,6 +4,7 @@ import { checkInvoicePaid } from '@/lib/lnd'
 export async function GET(request: NextRequest) {
   try {
     const paymentHash = request.nextUrl.searchParams.get('paymentHash')
+    console.log('Checking payment for hash:', paymentHash)
 
     if (!paymentHash) {
       return NextResponse.json(
@@ -13,15 +14,12 @@ export async function GET(request: NextRequest) {
     }
 
     const paid = await checkInvoicePaid(paymentHash)
+    console.log('Payment status:', paid)
 
     return NextResponse.json({ paid })
   } catch (error) {
-    // Don't spam console for expected polling failures
-    // Only log unexpected errors
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    if (!errorMessage.includes('LND configuration missing')) {
-      console.error('Tip check error:', errorMessage)
-    }
+    console.error('Tip check error:', errorMessage)
     
     // Return paid: false instead of 500 for LND errors
     // This allows graceful polling without error spam

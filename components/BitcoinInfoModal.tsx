@@ -72,16 +72,19 @@ export default function BitcoinInfoModal({ isOpen, onClose }: BitcoinInfoModalPr
   useEffect(() => {
     if (!invoice || paid) return
 
+    console.log('Starting payment poll for hash:', invoice.paymentHash)
+    
     const pollInterval = setInterval(async () => {
       try {
         const response = await fetch(`/api/tip/check?paymentHash=${invoice.paymentHash}`)
         const data = await response.json()
+        console.log('Poll response:', data)
         if (data.paid) {
           setPaid(true)
           clearInterval(pollInterval)
         }
-      } catch {
-        // Ignore polling errors
+      } catch (err) {
+        console.error('Poll error:', err)
       }
     }, 2000)
 
@@ -108,6 +111,7 @@ export default function BitcoinInfoModal({ isOpen, onClose }: BitcoinInfoModalPr
       const data = await response.json()
 
       if (response.ok) {
+        console.log('Invoice generated:', data.paymentHash)
         setInvoice({
           paymentRequest: data.paymentRequest,
           paymentHash: data.paymentHash,
