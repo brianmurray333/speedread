@@ -212,12 +212,12 @@ export default function Home() {
             onContentExtracted={handleContentExtracted}
           />
           
-          <div className="mt-8 flex items-center justify-center gap-2 text-[color:var(--muted)]">
-            <span>or</span>
+          <p className="mt-8 text-center text-[color:var(--muted)]">
+            <span>or </span>
             <Link href="/library" className="text-[color:var(--accent)] hover:underline font-medium">
-              Browse the library →
+              browse the library →
             </Link>
-          </div>
+          </p>
         </div>
       </section>
 

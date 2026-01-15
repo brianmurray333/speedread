@@ -18,7 +18,29 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
   const [error, setError] = useState<string | null>(null)
   const [dragActive, setDragActive] = useState(false)
   const [extractionProgress, setExtractionProgress] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+  const [clipboardSupported, setClipboardSupported] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Detect mobile and clipboard API support
+  useEffect(() => {
+    const checkMobile = () => {
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+      const isSmallScreen = window.innerWidth < 768
+      setIsMobile(isTouchDevice || isSmallScreen)
+    }
+    
+    // Check if Clipboard API is available
+    setClipboardSupported(
+      typeof navigator !== 'undefined' && 
+      'clipboard' in navigator && 
+      typeof navigator.clipboard.readText === 'function'
+    )
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Generate a title from the first few words of pasted text
   const generateTitleFromText = (text: string): string => {
@@ -74,6 +96,29 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
       setIsLoading(false)
     }
   }, [onTextExtracted, onContentExtracted])
+
+  // Handle paste button click (for mobile)
+  const handlePasteClick = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent triggering file input
+    
+    if (!clipboardSupported) {
+      setError('Clipboard access not supported. Please copy text and use Ctrl+V / Cmd+V.')
+      return
+    }
+
+    try {
+      const text = await navigator.clipboard.readText()
+      if (text && text.trim().length > 0) {
+        handlePastedText(text)
+      } else {
+        setError('Clipboard is empty. Copy some text first!')
+      }
+    } catch (err) {
+      // Permission denied or other error
+      console.error('Clipboard read error:', err)
+      setError('Could not access clipboard. Please allow clipboard access or paste manually.')
+    }
+  }, [clipboardSupported, handlePastedText])
 
   // Global paste event listener
   useEffect(() => {
@@ -201,24 +246,68 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
           </div>
         ) : (
           <>
-            <svg 
-              className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-[color:var(--muted)]" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="1.5" 
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-            </svg>
-            <p className="text-base sm:text-lg font-medium mb-1 sm:mb-2">
-              Drop a PDF or paste text
-            </p>
-            <p className="text-[color:var(--muted)] text-sm sm:text-base">
-              Tap to browse, or paste text anywhere
-            </p>
-            <p className="text-[color:var(--muted)] text-xs mt-2">
-              Images and charts will be shown inline
-            </p>
+            {/* Mobile-optimized layout with prominent paste button */}
+            {isMobile && clipboardSupported ? (
+              <div className="flex flex-col items-center gap-4">
+                {/* Paste button - prominent on mobile */}
+                <button
+                  onClick={handlePasteClick}
+                  className="w-full py-4 px-6 bg-[color:var(--accent)] text-white rounded-xl font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-3 text-lg"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  Paste from Clipboard
+                </button>
+
+                <div className="flex items-center gap-3 w-full">
+                  <div className="flex-1 h-px bg-[color:var(--border)]" />
+                  <span className="text-[color:var(--muted)] text-sm">or</span>
+                  <div className="flex-1 h-px bg-[color:var(--border)]" />
+                </div>
+
+                {/* Browse for PDF - secondary on mobile */}
+                <div className="text-center">
+                  <svg 
+                    className="w-10 h-10 mx-auto mb-2 text-[color:var(--muted)]" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="1.5" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  </svg>
+                  <p className="text-base font-medium mb-1">
+                    Tap to browse PDFs
+                  </p>
+                  <p className="text-[color:var(--muted)] text-xs">
+                    Images and charts will be shown inline
+                  </p>
+                </div>
+              </div>
+            ) : (
+              /* Desktop layout - original design */
+              <>
+                <svg 
+                  className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-[color:var(--muted)]" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="1.5" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+                <p className="text-base sm:text-lg font-medium mb-1 sm:mb-2">
+                  Drop a PDF or paste text
+                </p>
+                <p className="text-[color:var(--muted)] text-sm sm:text-base">
+                  {clipboardSupported ? 'Click to browse, or paste text anywhere (Ctrl/Cmd+V)' : 'Click to browse files'}
+                </p>
+                <p className="text-[color:var(--muted)] text-xs mt-2">
+                  Images and charts will be shown inline
+                </p>
+              </>
+            )}
           </>
         )}
       </div>
