@@ -60,7 +60,21 @@ function passesBasicFilter(word: string): boolean {
   if (word.length === 0) return false
   // Must contain at least one letter or number
   if (!/[a-zA-Z0-9]/.test(word)) return false
+  // Skip URLs - they're not readable in speed reading
+  if (isUrl(word)) return false
   return true
+}
+
+// Detect URLs
+function isUrl(word: string): boolean {
+  // Match common URL patterns
+  const urlPatterns = [
+    /^https?:\/\//i,           // http:// or https://
+    /^www\./i,                  // www.
+    /\.(com|org|net|edu|gov|io|co|me|app|dev|ai)\b/i,  // common TLDs
+    /^[a-z0-9-]+\.[a-z]{2,}/i,  // domain.tld pattern
+  ]
+  return urlPatterns.some(pattern => pattern.test(word))
 }
 
 // Detect chart/table-like patterns
