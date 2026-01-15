@@ -153,17 +153,23 @@ export default function SpeedReader({
 
   useEffect(() => {
     if (isPlaying || countdown !== null) {
-      // Start with controls hidden for autoStart, then show briefly on interaction
-      if (!autoStart || showControls) {
-        resetControlsTimeout()
+      // Set up hide timer when playback starts or countdown is active
+      if (hideControlsTimeout.current) {
+        clearTimeout(hideControlsTimeout.current)
+      }
+      if (!waitingForImageClick) {
+        hideControlsTimeout.current = setTimeout(() => {
+          setShowControls(false)
+        }, 1000)
       }
     } else {
+      // When stopped, ensure controls are visible
       setShowControls(true)
       if (hideControlsTimeout.current) {
         clearTimeout(hideControlsTimeout.current)
       }
     }
-  }, [isPlaying, countdown, autoStart, showControls, resetControlsTimeout])
+  }, [isPlaying, countdown, waitingForImageClick])
 
   // Mouse/touch handlers for showing controls
   const handleInteraction = useCallback(() => {
@@ -234,31 +240,21 @@ export default function SpeedReader({
     const orp = currentWord[orpIndex] || ''
     const after = currentWord.slice(orpIndex + 1)
 
+    // Use invisible padding to center the ORP letter while maintaining natural letter spacing.
+    // By adding invisible "after" on the left and invisible "before" on the right,
+    // the visible word is balanced around the ORP letter.
     return (
       <div className="relative w-full h-[1.2em] overflow-hidden">
-        {/* ORP letter is fixed at center, before/after extend from it */}
         <div className="absolute inset-0 flex items-center justify-center">
-          {/* Before text - positioned to the left of center, right-aligned */}
-          <span 
-            className="absolute text-[color:var(--foreground)] whitespace-nowrap text-right"
-            style={{ 
-              right: '50%',
-              marginRight: '0.3em', // Half of typical character width for ORP
-            }}
-          >
-            {before}
-          </span>
-          {/* ORP letter - fixed at center */}
-          <span className="text-[color:var(--accent)] font-semibold relative z-10">{orp}</span>
-          {/* After text - positioned to the right of center, left-aligned */}
-          <span 
-            className="absolute text-[color:var(--foreground)] whitespace-nowrap text-left"
-            style={{ 
-              left: '50%',
-              marginLeft: '0.3em', // Half of typical character width for ORP
-            }}
-          >
-            {after}
+          <span className="inline-flex whitespace-nowrap">
+            {/* Invisible padding: width of "after" text */}
+            <span className="invisible" aria-hidden="true">{after}</span>
+            {/* Visible word with highlighted ORP */}
+            <span className="text-[color:var(--foreground)]">{before}</span>
+            <span className="text-[color:var(--accent)] font-semibold">{orp}</span>
+            <span className="text-[color:var(--foreground)]">{after}</span>
+            {/* Invisible padding: width of "before" text */}
+            <span className="invisible" aria-hidden="true">{before}</span>
           </span>
         </div>
         {/* Left fade mask for overflow */}
