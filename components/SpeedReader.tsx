@@ -334,9 +334,11 @@ export default function SpeedReader({
         </div>
       )}
 
-      {/* Time remaining - top center, subtle text */}
+      {/* Time remaining - top center, subtle text, shows/hides with controls */}
       {countdown === null && wordsRemaining > 0 && !isCurrentImage && (
-        <div className="absolute top-6 left-0 right-0 flex justify-center pointer-events-none">
+        <div className={`absolute top-6 left-0 right-0 flex justify-center pointer-events-none transition-opacity duration-300 ${
+          showControls ? 'opacity-100' : 'opacity-0'
+        }`}>
           <span className="text-sm text-[color:var(--muted)]">{timeRemainingText}</span>
         </div>
       )}
