@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createHash } from 'crypto'
 import { checkInvoicePaid } from '@/lib/lnd'
 import { verifyL402Macaroon } from '@/lib/macaroon'
 
@@ -62,15 +63,34 @@ export async function POST(request: NextRequest) {
 
     if (document?.lightning_address) {
       // Creator payment via LNURL-pay
-      // For WebLN payments, if the client provides a preimage, we trust the payment succeeded
-      // (The wallet wouldn't return a preimage unless the payment actually went through)
+      // Verify the preimage cryptographically: SHA256(preimage) must equal payment hash
       if (preimage) {
-        // Payment verified via WebLN preimage
-        return NextResponse.json({
-          paid: true,
-          documentId,
-          message: 'Payment verified. Access granted.',
-        })
+        try {
+          // Compute SHA256 of the preimage
+          const computedHash = createHash('sha256')
+            .update(Buffer.from(preimage, 'hex'))
+            .digest('hex')
+          
+          // Verify it matches the payment hash from the token
+          if (computedHash !== verification.paymentHash) {
+            return NextResponse.json(
+              { paid: false, error: 'Invalid preimage' },
+              { status: 401 }
+            )
+          }
+          
+          // Preimage verified cryptographically
+          return NextResponse.json({
+            paid: true,
+            documentId,
+            message: 'Payment verified. Access granted.',
+          })
+        } catch {
+          return NextResponse.json(
+            { paid: false, error: 'Invalid preimage format' },
+            { status: 400 }
+          )
+        }
       } else {
         // No preimage - this is polling before payment
         // For creator payments, we can't check server-side, so return waiting status

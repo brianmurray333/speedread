@@ -40,7 +40,7 @@ async function lndRequest<T>(path: string, options: RequestInit = {}): Promise<T
   const cleanHost = LND_REST_HOST.replace(/^https?:\/\//, '')
   const url = `https://${cleanHost}${path}`
   
-  console.log('LND Request URL:', url)
+  // LND API request
   
   const response = await fetch(url, {
     ...options,
@@ -80,7 +80,10 @@ export async function createInvoice(
   // Convert base64 r_hash to hex for easier handling
   const paymentHash = Buffer.from(response.r_hash, 'base64').toString('hex')
   
-  console.log('Invoice created - r_hash from LND:', response.r_hash, '-> hex:', paymentHash)
+  // Invoice created successfully (payment hash logged for debugging only in development)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Invoice created successfully')
+  }
 
   return {
     paymentRequest: response.payment_request,
@@ -93,7 +96,7 @@ export async function createInvoice(
  */
 export async function checkInvoicePaid(paymentHashHex: string): Promise<boolean> {
   // LND REST API /v1/invoice/{r_hash_str} expects hex directly
-  console.log('Looking up invoice with hex hash:', paymentHashHex)
+  // Look up invoice status
   
   const response = await lndRequest<LookupInvoiceResponse>(
     `/v1/invoice/${paymentHashHex}`

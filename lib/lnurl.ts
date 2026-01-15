@@ -45,9 +45,52 @@ export function isValidLightningAddress(address: string): boolean {
 }
 
 /**
+ * Check if a domain is private/internal (SSRF protection)
+ */
+function isBlockedDomain(domain: string): boolean {
+  const lowerDomain = domain.toLowerCase()
+  
+  // Block localhost and common internal hostnames
+  const blockedHosts = [
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0',
+    '169.254.169.254', // AWS metadata
+    'metadata.google.internal', // GCP metadata
+    '::1',
+  ]
+  
+  if (blockedHosts.some(h => lowerDomain.includes(h))) {
+    return true
+  }
+  
+  // Block private IP ranges
+  const privateIPPatterns = [
+    /^10\./,
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+    /^192\.168\./,
+    /^169\.254\./,
+    /^fc00:/i,
+    /^fe80:/i,
+  ]
+  
+  if (privateIPPatterns.some(p => p.test(lowerDomain))) {
+    return true
+  }
+  
+  return false
+}
+
+/**
  * Fetch LNURL-pay metadata from a Lightning Address
  */
 export async function fetchLNURLPayInfo(lightningAddress: string): Promise<LNURLPayResponse> {
+  // Extract domain for SSRF check
+  const [, domain] = lightningAddress.split('@')
+  if (domain && isBlockedDomain(domain)) {
+    throw new Error('Invalid Lightning Address: blocked domain')
+  }
+  
   const lnurlEndpoint = lightningAddressToLNURL(lightningAddress)
   
   const response = await fetch(lnurlEndpoint, {
@@ -133,31 +176,32 @@ export async function requestInvoiceFromLightningAddress(
 }
 
 /**
- * Extract payment hash from a BOLT11 invoice
- * This is a simplified extraction - the payment hash is part of the invoice data
+ * Extract payment hash from a BOLT11 invoice using proper decoding
  */
-function extractPaymentHash(bolt11: string): string {
-  // The payment hash can be derived from decoding the bolt11 invoice
-  // For simplicity, we'll generate a unique identifier based on the invoice
-  // In production, you'd use a proper bolt11 decoder
+function extractPaymentHash(invoice: string): string {
+  // Use bolt11 library to properly decode the invoice
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const bolt11 = require('bolt11')
   
-  // Create a hash of the invoice as a unique identifier
-  // This works because each invoice is unique
-  const encoder = new TextEncoder()
-  const data = encoder.encode(bolt11)
-  
-  // Simple hash function for the payment hash placeholder
-  let hash = 0
-  for (let i = 0; i < data.length; i++) {
-    const char = data[i]
-    hash = ((hash << 5) - hash) + char
-    hash = hash & hash // Convert to 32-bit integer
+  try {
+    const decoded = bolt11.decode(invoice)
+    
+    // The payment hash is in the tags
+    const paymentHashTag = decoded.tags.find((t: { tagName: string }) => t.tagName === 'payment_hash')
+    if (paymentHashTag && paymentHashTag.data) {
+      return paymentHashTag.data as string
+    }
+    
+    // Fallback: some invoices have it as a direct property
+    if (decoded.paymentHash) {
+      return decoded.paymentHash
+    }
+    
+    throw new Error('No payment hash found in invoice')
+  } catch (error) {
+    console.error('Failed to decode BOLT11 invoice:', error)
+    throw new Error('Invalid BOLT11 invoice format')
   }
-  
-  // Convert to hex and pad to look like a payment hash
-  const hashHex = Math.abs(hash).toString(16).padStart(8, '0')
-  // Create a pseudo payment hash (64 chars like a real one)
-  return (hashHex.repeat(8)).substring(0, 64)
 }
 
 /**

@@ -13,6 +13,18 @@ interface PublishModalProps {
   wordCount: number
 }
 
+// Max content size: ~300 page novel (100,000 words * 6 chars avg = 600KB, rounded up to 1MB)
+const MAX_CONTENT_SIZE = 1_000_000
+
+// Sanitize user input to prevent XSS
+function sanitizeInput(str: string): string {
+  return str
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+}
+
 export default function PublishModal({
   isOpen,
   onClose,
@@ -71,6 +83,12 @@ export default function PublishModal({
       return
     }
 
+    // Content size limit (approximately 300 page novel)
+    if (textContent.length > MAX_CONTENT_SIZE) {
+      setError(`Document too large. Maximum size is approximately ${Math.floor(MAX_CONTENT_SIZE / 1000)}KB (about 300 pages).`)
+      return
+    }
+
     if (isPaid) {
       if (priceSats < 1) {
         setError('Price must be at least 1 sat')
@@ -90,13 +108,13 @@ export default function PublishModal({
 
     try {
       const { error: dbError } = await getSupabase().from('documents').insert({
-        title: docTitle.trim(),
-        text_content: textContent,
+        title: sanitizeInput(docTitle.trim()),
+        text_content: textContent, // Text content is displayed as plain text, not HTML
         word_count: wordCount,
         is_public: true,
         price_sats: isPaid ? priceSats : 0,
-        lightning_address: isPaid ? lightningAddress : null,
-        creator_name: creatorName.trim() || null,
+        lightning_address: isPaid ? lightningAddress.trim() : null,
+        creator_name: creatorName.trim() ? sanitizeInput(creatorName.trim()) : null,
       })
 
       if (dbError) {

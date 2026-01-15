@@ -117,10 +117,13 @@ export async function GET(
           { status: 402 }
         )
       }
-    } catch {
-      // If LND check fails, still allow access if token is valid
-      // This handles cases where LND is down or misconfigured
-      console.warn('LND check failed, allowing access based on valid token')
+    } catch (error) {
+      // If LND check fails, deny access for security
+      console.error('LND verification failed:', error)
+      return NextResponse.json(
+        { error: 'Payment verification temporarily unavailable. Please try again.' },
+        { status: 503 }
+      )
     }
 
     // All verified! Return content
