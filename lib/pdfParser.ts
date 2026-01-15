@@ -77,49 +77,44 @@ function isUrl(word: string): boolean {
   return urlPatterns.some(pattern => pattern.test(word))
 }
 
-// Detect chart/table-like patterns
+// Detect chart/table-like patterns - CONSERVATIVE approach
+// Only filter obvious chart artifacts, never regular text
 function isChartLikePattern(word: string, allWords: string[], index: number): boolean {
-  // Pure number or percentage (axis labels)
-  if (/^[\d,.]+%?$/.test(word)) return true
-  
-  // Grid references (A1, B2, etc.)
-  if (/^[A-Z]\d+$/i.test(word) && word.length <= 3) return true
-  
-  // Single letter/number that's not a common word
-  if (word.length === 1 && !/^[aAiI]$/.test(word)) return true
-  
-  // Repeated short fragments in sequence (table cells)
-  if (word.length <= 2) {
-    const prevWord = index > 0 ? allWords[index - 1] : ''
-    const nextWord = index < allWords.length - 1 ? allWords[index + 1] : ''
-    if (prevWord.length <= 2 && nextWord.length <= 2) {
-      return true
-    }
-  }
-  
-  // Axis label patterns (0, 10, 20, 30... or 0%, 25%, 50%...)
+  // Only detect long sequences of evenly-spaced numbers (axis labels like 0, 10, 20, 30...)
+  // Must be in a sequence of at least 4 consecutive numbers with consistent spacing
   if (/^\d+%?$/.test(word)) {
     const num = parseInt(word)
-    // Check if surrounded by other numbers in a sequence pattern
-    const prevNum = index > 0 ? parseInt(allWords[index - 1]) : NaN
-    const nextNum = index < allWords.length - 1 ? parseInt(allWords[index + 1]) : NaN
     
-    if (!isNaN(prevNum) && !isNaN(nextNum)) {
-      // Check for evenly spaced sequence
-      const diff1 = num - prevNum
-      const diff2 = nextNum - num
-      if (Math.abs(diff1 - diff2) < 2 && diff1 > 0) {
+    // Look for at least 3 numbers before AND after with consistent spacing
+    const prevNums: number[] = []
+    const nextNums: number[] = []
+    
+    for (let j = 1; j <= 3 && index - j >= 0; j++) {
+      const prev = parseInt(allWords[index - j])
+      if (!isNaN(prev)) prevNums.unshift(prev)
+      else break
+    }
+    
+    for (let j = 1; j <= 3 && index + j < allWords.length; j++) {
+      const next = parseInt(allWords[index + j])
+      if (!isNaN(next)) nextNums.push(next)
+      else break
+    }
+    
+    // Need at least 2 before AND 2 after to consider it a chart axis
+    if (prevNums.length >= 2 && nextNums.length >= 2) {
+      const allNums = [...prevNums, num, ...nextNums]
+      // Check if evenly spaced
+      const diffs = []
+      for (let i = 1; i < allNums.length; i++) {
+        diffs.push(allNums[i] - allNums[i - 1])
+      }
+      // All differences should be the same (within tolerance of 1)
+      const firstDiff = diffs[0]
+      const isEvenlySpaced = diffs.every(d => Math.abs(d - firstDiff) <= 1)
+      if (isEvenlySpaced && firstDiff > 0) {
         return true
       }
-    }
-  }
-  
-  // Figure/table captions without context
-  if (/^(Figure|Fig\.|Table|Chart|Graph)$/i.test(word)) {
-    const nextWord = index < allWords.length - 1 ? allWords[index + 1] : ''
-    // If followed by just a number, likely a label
-    if (/^\d+\.?:?$/.test(nextWord)) {
-      return true
     }
   }
 
