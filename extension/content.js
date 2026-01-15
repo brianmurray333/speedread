@@ -1,34 +1,34 @@
 // SpeedRead Chrome Extension - Content Script
 
-// Prevent duplicate initialization
-if (window._speedreadInitialized) {
-  // Already initialized, just listen for new messages
-} else {
+// Prevent duplicate initialization - wrap everything in the guard
+if (!window._speedreadInitialized) {
   window._speedreadInitialized = true;
+
+  // Listen for messages from background worker
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === 'speedread') {
+      const selectedText = window.getSelection()?.toString().trim();
+      
+      if (!selectedText) {
+        showNotification('Please select some text first');
+        return;
+      }
+      
+      // Parse text into words
+      const words = parseTextToWords(selectedText);
+      
+      if (words.length === 0) {
+        showNotification('No readable text found in selection');
+        return;
+      }
+      
+      // Launch the SpeedReader overlay
+      launchSpeedReader(words, selectedText);
+    }
+  });
 }
 
-// Listen for messages from background worker
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'speedread') {
-    const selectedText = window.getSelection()?.toString().trim();
-    
-    if (!selectedText) {
-      showNotification('Please select some text first');
-      return;
-    }
-    
-    // Parse text into words
-    const words = parseTextToWords(selectedText);
-    
-    if (words.length === 0) {
-      showNotification('No readable text found in selection');
-      return;
-    }
-    
-    // Launch the SpeedReader overlay
-    launchSpeedReader(words, selectedText);
-  }
-});
+// These functions can be redefined safely
 
 // Parse text into words (simplified version of pdfParser logic)
 function parseTextToWords(text) {
