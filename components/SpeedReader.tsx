@@ -58,9 +58,7 @@ export default function SpeedReader({
   const totalSecondsRemaining = Math.ceil(minutesRemaining * 60)
   const displayMinutes = Math.floor(totalSecondsRemaining / 60)
   const displaySeconds = totalSecondsRemaining % 60
-  const timeRemainingText = displayMinutes > 0 
-    ? `${displayMinutes}m ${displaySeconds}s remaining`
-    : `${displaySeconds}s remaining`
+  const timeRemainingText = `${displayMinutes}:${displaySeconds.toString().padStart(2, '0')}`
 
   // Countdown timer for autoStart
   useEffect(() => {
@@ -244,10 +242,10 @@ export default function SpeedReader({
         </div>
       )}
 
-      {/* Time remaining - top center, subtle grey text */}
+      {/* Time remaining - top center, subtle text matching player instructions */}
       {countdown === null && wordsRemaining > 0 && (
         <div className="absolute top-6 left-0 right-0 flex justify-center pointer-events-none">
-          <span className="text-sm text-gray-500">{timeRemainingText}</span>
+          <span className="text-sm text-[color:var(--muted)]">{timeRemainingText}</span>
         </div>
       )}
 
