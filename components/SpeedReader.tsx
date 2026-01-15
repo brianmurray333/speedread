@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { calculateORP } from '@/lib/pdfParser'
+import { calculateORP, ContentItem } from '@/lib/pdfParser'
 import { useTheme } from './ThemeProvider'
 
 interface SpeedReaderProps {
-  words: string[]
+  // Support both legacy string[] and new ContentItem[]
+  words?: string[]
+  content?: ContentItem[]
   initialWpm?: number
   autoStart?: boolean  // If true, show countdown and autoplay
   documentId?: string  // If provided, enables share button
@@ -14,22 +16,35 @@ interface SpeedReaderProps {
 }
 
 export default function SpeedReader({ 
-  words, 
+  words,
+  content,
   initialWpm = 300, 
   autoStart = false,
   documentId,
   onComplete,
   onExit 
 }: SpeedReaderProps) {
+  // Convert legacy words array to content items if needed
+  const contentItems: ContentItem[] = content || (words?.map(w => ({ type: 'word' as const, value: w })) || [])
+  
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [wpm, setWpm] = useState(initialWpm)
   const [showControls, setShowControls] = useState(!autoStart) // Hide controls if autoStart
   const [countdown, setCountdown] = useState<number | null>(autoStart ? 3 : null)
   const [showCopied, setShowCopied] = useState(false)
+  const [waitingForImageClick, setWaitingForImageClick] = useState(false)
   const hideControlsTimeout = useRef<NodeJS.Timeout | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const { theme, toggleTheme } = useTheme()
+
+  const currentItem = contentItems[currentIndex]
+  const isCurrentImage = currentItem?.type === 'image'
+  
+  // Calculate progress based on word count (images don't count toward reading progress the same way)
+  const wordCount = contentItems.filter(item => item.type === 'word').length
+  const wordsRead = contentItems.slice(0, currentIndex + 1).filter(item => item.type === 'word').length
+  const progress = wordCount > 0 ? (wordsRead / wordCount) * 100 : 0
 
   // Handle share button click
   const handleShare = useCallback(async () => {
@@ -45,20 +60,29 @@ export default function SpeedReader({
     }
   }, [documentId])
 
-  const currentWord = words[currentIndex] || ''
-  const progress = words.length > 0 ? ((currentIndex + 1) / words.length) * 100 : 0
-  const orpIndex = calculateORP(currentWord)
-
   // Calculate interval from WPM
   const interval = Math.round(60000 / wpm)
 
   // Calculate time remaining based on WPM and words left
-  const wordsRemaining = words.length - currentIndex - 1
+  const wordsRemaining = wordCount - wordsRead
   const minutesRemaining = wordsRemaining / wpm
   const totalSecondsRemaining = Math.ceil(minutesRemaining * 60)
   const displayMinutes = Math.floor(totalSecondsRemaining / 60)
   const displaySeconds = totalSecondsRemaining % 60
   const timeRemainingText = `${displayMinutes}:${displaySeconds.toString().padStart(2, '0')}`
+
+  // Handle continuing past an image
+  const handleImageContinue = useCallback(() => {
+    setWaitingForImageClick(false)
+    setCurrentIndex(prev => {
+      if (prev >= contentItems.length - 1) {
+        setIsPlaying(false)
+        onComplete?.()
+        return prev
+      }
+      return prev + 1
+    })
+  }, [contentItems.length, onComplete])
 
   // Countdown timer for autoStart
   useEffect(() => {
@@ -77,23 +101,35 @@ export default function SpeedReader({
     return () => clearTimeout(timer)
   }, [countdown])
 
-  // Auto-advance words
+  // Auto-advance words (but pause on images)
   useEffect(() => {
-    if (!isPlaying) return
+    if (!isPlaying || waitingForImageClick) return
+
+    // Check if current item is an image
+    if (isCurrentImage) {
+      setIsPlaying(false)
+      setWaitingForImageClick(true)
+      setShowControls(true)
+      return
+    }
 
     const timer = setInterval(() => {
       setCurrentIndex(prev => {
-        if (prev >= words.length - 1) {
+        const nextIndex = prev + 1
+        
+        if (nextIndex >= contentItems.length) {
           setIsPlaying(false)
           onComplete?.()
           return prev
         }
-        return prev + 1
+        
+        // Check if next item is an image - if so, we'll handle it in the next render
+        return nextIndex
       })
     }, interval)
 
     return () => clearInterval(timer)
-  }, [isPlaying, interval, words.length, onComplete])
+  }, [isPlaying, interval, contentItems, isCurrentImage, onComplete, waitingForImageClick])
 
   // Hide controls after inactivity during playback
   const resetControlsTimeout = useCallback(() => {
@@ -101,12 +137,12 @@ export default function SpeedReader({
     if (hideControlsTimeout.current) {
       clearTimeout(hideControlsTimeout.current)
     }
-    if (isPlaying || countdown !== null) {
+    if ((isPlaying || countdown !== null) && !waitingForImageClick) {
       hideControlsTimeout.current = setTimeout(() => {
         setShowControls(false)
       }, 2000)
     }
-  }, [isPlaying, countdown])
+  }, [isPlaying, countdown, waitingForImageClick])
 
   useEffect(() => {
     if (isPlaying || countdown !== null) {
@@ -139,14 +175,24 @@ export default function SpeedReader({
       
       switch (e.key) {
         case ' ':
+        case 'Enter':
           e.preventDefault()
-          setIsPlaying(prev => !prev)
+          if (waitingForImageClick) {
+            handleImageContinue()
+          } else {
+            setIsPlaying(prev => !prev)
+          }
           break
         case 'ArrowRight':
-          setIsPlaying(false)
-          setCurrentIndex(prev => Math.min(prev + 1, words.length - 1))
+          if (waitingForImageClick) {
+            handleImageContinue()
+          } else {
+            setIsPlaying(false)
+            setCurrentIndex(prev => Math.min(prev + 1, contentItems.length - 1))
+          }
           break
         case 'ArrowLeft':
+          setWaitingForImageClick(false)
           setIsPlaying(false)
           setCurrentIndex(prev => Math.max(prev - 1, 0))
           break
@@ -162,18 +208,21 @@ export default function SpeedReader({
         case 'r':
           setCurrentIndex(0)
           setIsPlaying(false)
+          setWaitingForImageClick(false)
           break
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isPlaying, countdown, words.length, onExit, handleInteraction])
+  }, [isPlaying, countdown, contentItems.length, onExit, handleInteraction, waitingForImageClick, handleImageContinue])
 
   // Render word with ORP at fixed center position
   const renderWord = () => {
-    if (!currentWord) return null
-
+    if (!currentItem || currentItem.type !== 'word') return null
+    
+    const currentWord = currentItem.value
+    const orpIndex = calculateORP(currentWord)
     const before = currentWord.slice(0, orpIndex)
     const orp = currentWord[orpIndex] || ''
     const after = currentWord.slice(orpIndex + 1)
@@ -188,6 +237,49 @@ export default function SpeedReader({
         <span className="text-[color:var(--foreground)] text-left inline-block" style={{ minWidth: '40%' }}>
           {after}
         </span>
+      </div>
+    )
+  }
+
+  // Render image with continue button
+  const renderImage = () => {
+    if (!currentItem || currentItem.type !== 'image') return null
+
+    return (
+      <div className="flex flex-col items-center gap-6 max-w-4xl mx-auto px-4">
+        {/* Image container */}
+        <div className="relative w-full flex justify-center">
+          <img
+            src={currentItem.src}
+            alt={currentItem.alt || 'Document image'}
+            className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-lg"
+            style={{
+              maxWidth: currentItem.width ? Math.min(currentItem.width, 800) : '100%'
+            }}
+          />
+        </div>
+        
+        {/* Image caption */}
+        {currentItem.alt && (
+          <p className="text-[color:var(--muted)] text-sm text-center">
+            {currentItem.alt}
+          </p>
+        )}
+        
+        {/* Continue button */}
+        <button
+          onClick={handleImageContinue}
+          className="btn-primary flex items-center gap-2 px-8 py-4 text-lg"
+        >
+          Continue Reading
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+          </svg>
+        </button>
+        
+        <p className="text-[color:var(--muted)] text-sm">
+          Press Space, Enter, or → to continue
+        </p>
       </div>
     )
   }
@@ -242,27 +334,31 @@ export default function SpeedReader({
         </div>
       )}
 
-      {/* Time remaining - top center, subtle text matching player instructions */}
-      {countdown === null && wordsRemaining > 0 && (
+      {/* Time remaining - top center, subtle text */}
+      {countdown === null && wordsRemaining > 0 && !isCurrentImage && (
         <div className="absolute top-6 left-0 right-0 flex justify-center pointer-events-none">
           <span className="text-sm text-[color:var(--muted)]">{timeRemainingText}</span>
         </div>
       )}
 
-      {/* Word Display - ORP always at exact center */}
+      {/* Content Display - Word or Image */}
       <div className="flex-1 flex items-center justify-center w-full">
-        <div 
-          className="w-full max-w-4xl px-4 text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-normal tracking-wide"
-          style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif' }}
-        >
-          {renderWord()}
-        </div>
+        {isCurrentImage ? (
+          renderImage()
+        ) : (
+          <div 
+            className="w-full max-w-4xl px-4 text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-normal tracking-wide"
+            style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif' }}
+          >
+            {renderWord()}
+          </div>
+        )}
       </div>
 
-      {/* Controls - fade in/out based on interaction */}
+      {/* Controls - fade in/out based on interaction (hidden when viewing images) */}
       <div 
         className={`absolute bottom-0 left-0 right-0 p-6 transition-opacity duration-300 ${
-          showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          showControls && !isCurrentImage ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
         {/* Progress bar - clickable to seek */}
@@ -272,8 +368,9 @@ export default function SpeedReader({
             const rect = e.currentTarget.getBoundingClientRect()
             const clickX = e.clientX - rect.left
             const percentage = clickX / rect.width
-            const newIndex = Math.floor(percentage * words.length)
-            setCurrentIndex(Math.max(0, Math.min(newIndex, words.length - 1)))
+            const newIndex = Math.floor(percentage * contentItems.length)
+            setCurrentIndex(Math.max(0, Math.min(newIndex, contentItems.length - 1)))
+            setWaitingForImageClick(false)
           }}
         >
           <div 
@@ -329,6 +426,7 @@ export default function SpeedReader({
             onClick={() => {
               setCurrentIndex(0)
               setIsPlaying(false)
+              setWaitingForImageClick(false)
             }}
             className="btn-secondary flex items-center gap-1 sm:gap-2 py-3 px-3 sm:px-4"
             aria-label="Restart"
@@ -368,7 +466,10 @@ export default function SpeedReader({
 
         {/* Word count */}
         <p className="text-center text-[color:var(--muted)] text-xs mt-2">
-          Word {currentIndex + 1} of {words.length}
+          Word {wordsRead} of {wordCount}
+          {contentItems.some(item => item.type === 'image') && (
+            <span className="ml-2">• Includes images</span>
+          )}
         </p>
       </div>
     </div>
