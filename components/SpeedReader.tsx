@@ -484,16 +484,16 @@ export default function SpeedReader({
           {/* Play/Pause */}
           <button
             onClick={() => setIsPlaying(prev => !prev)}
-            className="btn-primary w-12 h-12 flex items-center justify-center text-white"
+            className="w-12 h-12 flex items-center justify-center rounded-lg bg-[color:var(--accent)] hover:opacity-90 transition-opacity"
             aria-label={isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? (
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6" fill="white" viewBox="0 0 24 24">
                 <rect x="6" y="4" width="4" height="16" rx="1" />
                 <rect x="14" y="4" width="4" height="16" rx="1" />
               </svg>
             ) : (
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6" fill="white" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z" />
               </svg>
             )}
@@ -506,7 +506,7 @@ export default function SpeedReader({
               setIsPlaying(false)
               setWaitingForImageClick(false)
             }}
-            className="btn-secondary w-12 h-12 flex items-center justify-center text-[color:var(--foreground)]"
+            className="w-12 h-12 flex items-center justify-center rounded-lg bg-[color:var(--surface)] border border-[color:var(--border)] hover:bg-[color:var(--surface-hover)] transition-colors"
             aria-label="Restart"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -517,7 +517,7 @@ export default function SpeedReader({
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className="btn-secondary w-12 h-12 flex items-center justify-center text-[color:var(--foreground)]"
+            className="w-12 h-12 flex items-center justify-center rounded-lg bg-[color:var(--surface)] border border-[color:var(--border)] hover:bg-[color:var(--surface-hover)] transition-colors"
             aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {theme === 'dark' ? (
@@ -535,7 +535,7 @@ export default function SpeedReader({
           {/* Fullscreen toggle */}
           <button
             onClick={toggleFullscreen}
-            className="btn-secondary w-12 h-12 flex items-center justify-center text-[color:var(--foreground)]"
+            className="w-12 h-12 flex items-center justify-center rounded-lg bg-[color:var(--surface)] border border-[color:var(--border)] hover:bg-[color:var(--surface-hover)] transition-colors"
             aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
           >
             {isFullscreen ? (
