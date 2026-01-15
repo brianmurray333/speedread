@@ -90,14 +90,9 @@ export async function createInvoice(
  * Check if an invoice has been paid
  */
 export async function checkInvoicePaid(paymentHashHex: string): Promise<boolean> {
-  // Convert hex payment hash to base64url for the API
-  const paymentHashBase64 = Buffer.from(paymentHashHex, 'hex')
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-
+  // Use r_hash_str query param which accepts hex directly
   const response = await lndRequest<LookupInvoiceResponse>(
-    `/v1/invoice/${paymentHashBase64}`
+    `/v1/invoice?r_hash_str=${paymentHashHex}`
   )
 
   return response.settled || response.state === 'SETTLED'
@@ -107,10 +102,6 @@ export async function checkInvoicePaid(paymentHashHex: string): Promise<boolean>
  * Get invoice details
  */
 export async function getInvoice(paymentHashHex: string): Promise<LookupInvoiceResponse> {
-  const paymentHashBase64 = Buffer.from(paymentHashHex, 'hex')
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-
-  return lndRequest<LookupInvoiceResponse>(`/v1/invoice/${paymentHashBase64}`)
+  // Use r_hash_str query param which accepts hex directly
+  return lndRequest<LookupInvoiceResponse>(`/v1/invoice?r_hash_str=${paymentHashHex}`)
 }
