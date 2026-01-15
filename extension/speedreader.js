@@ -21,10 +21,17 @@ class SpeedReader {
     this.shareUrl = null; // Set after publishing
     this.isPublishing = false;
     this.showingPublishModal = false;
+    this.isStarting = true; // Prevent actions during startup
     
     this.render();
     this.bindEvents();
     this.applyTheme();
+    
+    // Clear the starting flag after a short delay to prevent
+    // the triggering keyboard shortcut from activating UI elements
+    setTimeout(() => {
+      this.isStarting = false;
+    }, 500);
   }
   
   // Calculate Optimal Recognition Point
@@ -290,6 +297,9 @@ class SpeedReader {
   
   // Handle keyboard input
   handleKeyboard(e) {
+    // Ignore keyboard during startup to prevent trigger shortcut from affecting UI
+    if (this.isStarting) return;
+    
     this.resetControlsTimeout();
     
     switch (e.key) {
@@ -512,6 +522,9 @@ class SpeedReader {
   
   // Handle share button click
   handleShare() {
+    // Prevent accidental trigger during startup (from keyboard shortcut propagation)
+    if (this.isStarting) return;
+    
     if (this.shareUrl) {
       // Already published - copy the link
       this.copyToClipboard(this.shareUrl);
