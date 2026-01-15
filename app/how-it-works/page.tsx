@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { BookOpenText } from 'lucide-react'
 
 // Demo text that explains the technique
-const DEMO_TEXT = `This is SpeedRead. Watch this word. See how the red letter helps your eye focus? That's the Optimal Recognition Point. Your brain recognizes words faster when you focus here. Now let's speed up a bit. Notice how you can still understand everything even as we go faster? This technique is called RSVP. Rapid Serial Visual Presentation. With practice you can read at 500 words per minute or more. Ready to try it yourself?`
+const DEMO_TEXT = `This is SpeedRead. Watch this word. See how the orange letter helps your eye focus? That's the Optimal Recognition Point. Your brain recognizes words faster when you focus here. Now let's speed up a bit. Notice how you can still understand everything even as we go faster? This technique is called RSVP. Rapid Serial Visual Presentation. With practice you can read at 500 words per minute or more. Ready to try it yourself?`
 
 // Speed schedule: [wordIndex, wpm] - speed increases at these word indices
 const SPEED_SCHEDULE: [number, number][] = [
