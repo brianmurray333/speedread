@@ -52,6 +52,16 @@ export default function SpeedReader({
   // Calculate interval from WPM
   const interval = Math.round(60000 / wpm)
 
+  // Calculate time remaining based on WPM and words left
+  const wordsRemaining = words.length - currentIndex - 1
+  const minutesRemaining = wordsRemaining / wpm
+  const totalSecondsRemaining = Math.ceil(minutesRemaining * 60)
+  const displayMinutes = Math.floor(totalSecondsRemaining / 60)
+  const displaySeconds = totalSecondsRemaining % 60
+  const timeRemainingText = displayMinutes > 0 
+    ? `${displayMinutes}m ${displaySeconds}s remaining`
+    : `${displaySeconds}s remaining`
+
   // Countdown timer for autoStart
   useEffect(() => {
     if (countdown === null) return
@@ -231,6 +241,13 @@ export default function SpeedReader({
       {countdown !== null && (
         <div className="absolute top-12 left-0 right-0 flex justify-center pointer-events-none">
           <span className="text-6xl font-bold text-[color:var(--accent)]">{countdown}</span>
+        </div>
+      )}
+
+      {/* Time remaining - top center, subtle grey text */}
+      {countdown === null && wordsRemaining > 0 && (
+        <div className="absolute top-6 left-0 right-0 flex justify-center pointer-events-none">
+          <span className="text-sm text-gray-500">{timeRemainingText}</span>
         </div>
       )}
 
