@@ -126,7 +126,7 @@ export default function Home() {
               }}
               className="w-full py-3 text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors text-sm"
             >
-              Upload a different file
+              Start over
             </button>
           </div>
         </div>

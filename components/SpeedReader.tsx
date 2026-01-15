@@ -8,6 +8,7 @@ interface SpeedReaderProps {
   words: string[]
   initialWpm?: number
   autoStart?: boolean  // If true, show countdown and autoplay
+  documentId?: string  // If provided, enables share button
   onComplete?: () => void
   onExit?: () => void
 }
@@ -16,6 +17,7 @@ export default function SpeedReader({
   words, 
   initialWpm = 300, 
   autoStart = false,
+  documentId,
   onComplete,
   onExit 
 }: SpeedReaderProps) {
@@ -24,9 +26,24 @@ export default function SpeedReader({
   const [wpm, setWpm] = useState(initialWpm)
   const [showControls, setShowControls] = useState(!autoStart) // Hide controls if autoStart
   const [countdown, setCountdown] = useState<number | null>(autoStart ? 3 : null)
+  const [showCopied, setShowCopied] = useState(false)
   const hideControlsTimeout = useRef<NodeJS.Timeout | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const { theme, toggleTheme } = useTheme()
+
+  // Handle share button click
+  const handleShare = useCallback(async () => {
+    if (!documentId) return
+    
+    const shareUrl = `${window.location.origin}/library?read=${documentId}`
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setShowCopied(true)
+      setTimeout(() => setShowCopied(false), 2000)
+    } catch (e) {
+      console.error('Failed to copy link:', e)
+    }
+  }, [documentId])
 
   const currentWord = words[currentIndex] || ''
   const progress = words.length > 0 ? ((currentIndex + 1) / words.length) * 100 : 0
@@ -175,18 +192,40 @@ export default function SpeedReader({
       onTouchStart={handleInteraction}
       onClick={handleInteraction}
     >
-      {/* Exit button - top right */}
-      <button
-        onClick={onExit}
-        className={`absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-full bg-[color:var(--surface)] border border-[color:var(--border)] hover:bg-[color:var(--surface-hover)] transition-all duration-300 ${
-          showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-        aria-label="Exit"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+      {/* Top right buttons */}
+      <div className={`absolute top-6 right-6 flex items-center gap-2 transition-all duration-300 ${
+        showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      }`}>
+        {/* Share button */}
+        {documentId && (
+          <button
+            onClick={handleShare}
+            className="relative w-10 h-10 flex items-center justify-center rounded-full bg-[color:var(--surface)] border border-[color:var(--border)] hover:bg-[color:var(--surface-hover)] transition-colors"
+            aria-label="Share"
+          >
+            {showCopied ? (
+              <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+            )}
+          </button>
+        )}
+        
+        {/* Exit button */}
+        <button
+          onClick={onExit}
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-[color:var(--surface)] border border-[color:var(--border)] hover:bg-[color:var(--surface-hover)] transition-colors"
+          aria-label="Exit"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
 
       {/* Countdown display - top of screen, horizontally centered */}
       {countdown !== null && (

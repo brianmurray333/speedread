@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { getSupabase, Document } from '@/lib/supabase'
 import Header from '@/components/Header'
 import SpeedReader from '@/components/SpeedReader'
@@ -10,7 +11,8 @@ import { parseTextToWords } from '@/lib/pdfParser'
 // Store paid document macaroons in memory (would use localStorage in production)
 const paidDocuments = new Map<string, string>()
 
-export default function LibraryPage() {
+function LibraryContent() {
+  const searchParams = useSearchParams()
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
@@ -20,20 +22,6 @@ export default function LibraryPage() {
   // Payment state
   const [paymentDoc, setPaymentDoc] = useState<Document | null>(null)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
-
-  useEffect(() => {
-    fetchDocuments()
-    // Load paid documents from localStorage
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('speedread_paid_docs')
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        Object.entries(parsed).forEach(([id, macaroon]) => {
-          paidDocuments.set(id, macaroon as string)
-        })
-      }
-    }
-  }, [])
 
   const fetchDocuments = async () => {
     try {
@@ -158,16 +146,80 @@ export default function LibraryPage() {
 
   const isPaid = (doc: Document) => paidDocuments.has(doc.id)
 
-  if (isReading && words.length > 0) {
+  // Handle direct read via URL parameter (for shared links)
+  const handleDirectRead = useCallback(async (docId: string) => {
+    try {
+      const { data, error } = await getSupabase()
+        .from('documents')
+        .select('*')
+        .eq('id', docId)
+        .single()
+
+      if (error || !data) {
+        console.error('Document not found:', error)
+        return
+      }
+
+      // Load paid docs from localStorage first
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('speedread_paid_docs')
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          Object.entries(parsed).forEach(([id, macaroon]) => {
+            paidDocuments.set(id, macaroon as string)
+          })
+        }
+      }
+
+      // Now handle the document
+      await handleReadDocument(data)
+    } catch (e) {
+      console.error('Error fetching document for direct read:', e)
+    }
+  }, [])
+
+  // Fetch documents and check for direct read param
+  useEffect(() => {
+    const init = async () => {
+      // Load paid documents from localStorage
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('speedread_paid_docs')
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          Object.entries(parsed).forEach(([id, macaroon]) => {
+            paidDocuments.set(id, macaroon as string)
+          })
+        }
+      }
+
+      // Check for direct read parameter
+      const readId = searchParams.get('read')
+      if (readId) {
+        await handleDirectRead(readId)
+      }
+
+      // Always fetch documents for the library view
+      await fetchDocuments()
+    }
+
+    init()
+  }, [searchParams, handleDirectRead])
+
+  if (isReading && words.length > 0 && selectedDoc) {
     return (
       <SpeedReader
         words={words}
         autoStart={true}
+        documentId={selectedDoc.id}
         onComplete={() => {}}
         onExit={() => {
           setIsReading(false)
           setSelectedDoc(null)
           setWords([])
+          // Clear the URL parameter when exiting
+          if (typeof window !== 'undefined') {
+            window.history.replaceState({}, '', '/library')
+          }
         }}
       />
     )
@@ -283,5 +335,17 @@ export default function LibraryPage() {
         documentTitle={paymentDoc?.title || ''}
       />
     </div>
+  )
+}
+
+export default function LibraryPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[color:var(--background)] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-[color:var(--accent)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <LibraryContent />
+    </Suspense>
   )
 }
