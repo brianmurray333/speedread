@@ -132,7 +132,7 @@
   background: var(--sr-surface-hover) !important;
 }
 
-/* Publish Modal */
+/* Publish Modal - display is controlled by inline style, don't override it */
 .speedread-publish-modal {
   position: absolute !important;
   top: 0 !important;
@@ -141,7 +141,7 @@
   bottom: 0 !important;
   background: rgba(0, 0, 0, 0.7) !important;
   backdrop-filter: blur(4px) !important;
-  display: flex !important;
+  /* display is set inline: none by default, flex when shown */
   align-items: center !important;
   justify-content: center !important;
   z-index: 100 !important;
