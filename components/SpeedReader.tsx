@@ -537,7 +537,7 @@ export default function SpeedReader({
           >
             {isFullscreen ? (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 9L4 4m0 0v4m0-4h4m6 6l5 5m0 0v-4m0 4h-4M9 15l-5 5m0 0v-4m0 4h4m6-6l5-5m0 0v4m0-4h-4" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 9H4m5 0V4m0 5L4 4m11 11h5m-5 0v5m0-5l5 5M9 15H4m5 0v5m0-5l-5 5m11-11h5m-5 0V4m0 5l5-5" />
               </svg>
             ) : (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">

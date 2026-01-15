@@ -84,6 +84,7 @@ export default function Home() {
         <SpeedReader
           content={content.length > 0 ? content : undefined}
           words={content.length === 0 ? words : undefined}
+          autoStart={true}
           onComplete={() => {}}
           onRequestPublish={() => setShowPublishModal(true)}
           onExit={() => {
