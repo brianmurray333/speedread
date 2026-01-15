@@ -6,7 +6,7 @@ import { getSupabase, Document } from '@/lib/supabase'
 import Header from '@/components/Header'
 import SpeedReader from '@/components/SpeedReader'
 import PaymentModal from '@/components/PaymentModal'
-import { parseTextToWords } from '@/lib/pdfParser'
+import { parseTextToContentItems, ContentItem } from '@/lib/pdfParser'
 
 // Store paid document macaroons in memory (would use localStorage in production)
 const paidDocuments = new Map<string, string>()
@@ -16,7 +16,7 @@ function LibraryContent() {
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
-  const [words, setWords] = useState<string[]>([])
+  const [content, setContent] = useState<ContentItem[]>([])
   const [isReading, setIsReading] = useState(false)
   
   // Payment state
@@ -64,9 +64,9 @@ function LibraryContent() {
         setShowPaymentModal(true)
       }
     } else {
-      // Free document - read directly
-      const docWords = parseTextToWords(doc.text_content)
-      setWords(docWords)
+      // Free document - read directly with smart parsing
+      const docContent = parseTextToContentItems(doc.text_content)
+      setContent(docContent)
       setSelectedDoc(doc)
       setIsReading(true)
     }
@@ -80,8 +80,8 @@ function LibraryContent() {
       
       if (response.ok) {
         const data = await response.json()
-        const docWords = parseTextToWords(data.textContent)
-        setWords(docWords)
+        const docContent = parseTextToContentItems(data.textContent)
+        setContent(docContent)
         setSelectedDoc(doc)
         setIsReading(true)
       } else if (response.status === 402) {
@@ -124,10 +124,10 @@ function LibraryContent() {
       
       if (response.ok) {
         const data = await response.json()
-        const docWords = parseTextToWords(data.textContent)
+        const docContent = parseTextToContentItems(data.textContent)
         
         // Set reading state before closing modal
-        setWords(docWords)
+        setContent(docContent)
         setSelectedDoc(paymentDoc)
         setShowPaymentModal(false)
         setPaymentDoc(null)
@@ -205,17 +205,20 @@ function LibraryContent() {
     init()
   }, [searchParams, handleDirectRead])
 
-  if (isReading && words.length > 0 && selectedDoc) {
+  // Get word count for display
+  const wordCount = content.filter(item => item.type === 'word').length
+
+  if (isReading && content.length > 0 && selectedDoc) {
     return (
       <SpeedReader
-        words={words}
+        content={content}
         autoStart={true}
         documentId={selectedDoc.id}
         onComplete={() => {}}
         onExit={() => {
           setIsReading(false)
           setSelectedDoc(null)
-          setWords([])
+          setContent([])
           // Clear the URL parameter when exiting
           if (typeof window !== 'undefined') {
             window.history.replaceState({}, '', '/library')

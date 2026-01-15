@@ -7,9 +7,11 @@ import SpeedReader from '@/components/SpeedReader'
 import IntroReader from '@/components/IntroReader'
 import PublishModal from '@/components/PublishModal'
 import Link from 'next/link'
+import { ContentItem } from '@/lib/pdfParser'
 
 export default function Home() {
   const [words, setWords] = useState<string[]>([])
+  const [content, setContent] = useState<ContentItem[]>([])
   const [title, setTitle] = useState<string>('')
   const [textContent, setTextContent] = useState<string>('')
   const [isReading, setIsReading] = useState(false)
@@ -35,6 +37,18 @@ export default function Home() {
     setShowUploadOptions(true)
   }
 
+  const handleContentExtracted = (extractedContent: ContentItem[], docTitle: string, rawText?: string) => {
+    setContent(extractedContent)
+    // Also update words for backward compatibility
+    const extractedWords = extractedContent
+      .filter((item): item is { type: 'word'; value: string } => item.type === 'word')
+      .map(item => item.value)
+    setWords(extractedWords)
+    setTitle(docTitle)
+    setTextContent(rawText || extractedWords.join(' '))
+    setShowUploadOptions(true)
+  }
+
   const handleStartReading = () => {
     setShowUploadOptions(false)
     setIsReading(true)
@@ -44,11 +58,15 @@ export default function Home() {
     setShowPublishModal(false)
     setShowUploadOptions(false)
     setWords([])
+    setContent([])
     setTitle('')
     setTextContent('')
     // Could show a success message or redirect to library
     alert('Published successfully! Your document is now in the library.')
   }
+
+  // Count images in content
+  const imageCount = content.filter(item => item.type === 'image').length
 
   // Show nothing while checking localStorage (prevents flash)
   if (showIntro === null) {
@@ -60,14 +78,16 @@ export default function Home() {
     return <IntroReader onComplete={handleIntroComplete} />
   }
 
-  if (isReading && words.length > 0) {
+  if (isReading && (content.length > 0 || words.length > 0)) {
   return (
       <SpeedReader
-        words={words}
+        content={content.length > 0 ? content : undefined}
+        words={content.length === 0 ? words : undefined}
         onComplete={() => {}}
         onExit={() => {
           setIsReading(false)
           setWords([])
+          setContent([])
           setTitle('')
           setTextContent('')
         }}
@@ -89,6 +109,11 @@ export default function Home() {
             <h1 className="text-2xl font-bold mb-2">{title}</h1>
             <p className="text-[color:var(--muted)]">
               {words.length.toLocaleString()} words ready
+              {imageCount > 0 && (
+                <span className="block text-sm mt-1">
+                  + {imageCount} image{imageCount > 1 ? 's' : ''} extracted
+                </span>
+              )}
             </p>
           </div>
 
@@ -121,6 +146,7 @@ export default function Home() {
               onClick={() => {
                 setShowUploadOptions(false)
                 setWords([])
+                setContent([])
                 setTitle('')
                 setTextContent('')
               }}
@@ -160,7 +186,10 @@ export default function Home() {
             No distractions, maximum focus.
           </p>
           
-          <PDFUploader onTextExtracted={handleTextExtracted} />
+          <PDFUploader 
+            onTextExtracted={handleTextExtracted}
+            onContentExtracted={handleContentExtracted}
+          />
           
           <div className="mt-8 flex items-center justify-center gap-2 text-[color:var(--muted)]">
             <span>or</span>

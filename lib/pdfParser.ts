@@ -1,5 +1,3 @@
-import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
-
 // Content types for mixed word/image flow
 export type ContentItem = 
   | { type: 'word'; value: string }
@@ -154,6 +152,11 @@ interface TextItemWithPosition {
   height: number
 }
 
+// Check if an item is a TextItem (has str property)
+function isTextItem(item: unknown): item is { str: string; transform?: number[]; width?: number; height?: number } {
+  return typeof item === 'object' && item !== null && 'str' in item
+}
+
 // Filter text items based on position heuristics
 function filterTextItemsByPosition(items: TextItemWithPosition[]): TextItemWithPosition[] {
   if (items.length === 0) return items
@@ -188,9 +191,6 @@ function filterTextItemsByPosition(items: TextItemWithPosition[]): TextItemWithP
   return items
 }
 
-// Image extraction operator names from PDF.js
-const IMAGE_OPS = ['paintImageXObject', 'paintJpegXObject', 'paintImageXObjectRepeat']
-
 interface ExtractedImage {
   src: string
   width: number
@@ -199,16 +199,17 @@ interface ExtractedImage {
   yPosition: number  // For ordering
 }
 
-// Extract images from a PDF page
+// Extract images from a PDF page using canvas rendering
 async function extractImagesFromPage(
-  page: PDFPageProxy, 
+  page: { getOperatorList: () => Promise<{ fnArray: number[]; argsArray: unknown[][] }>; objs: { get: (name: string, callback: (img: unknown) => void) => void } }, 
   pageNum: number
 ): Promise<ExtractedImage[]> {
   const images: ExtractedImage[] = []
   
   try {
     const operatorList = await page.getOperatorList()
-    const { OPS } = await import('pdfjs-dist')
+    const pdfjsLib = await import('pdfjs-dist')
+    const { OPS } = pdfjsLib
     
     // Track image objects we've seen
     const seenImages = new Set<string>()
@@ -218,7 +219,7 @@ async function extractImagesFromPage(
       const args = operatorList.argsArray[i]
       
       // Check if this is an image painting operation
-      if (fnId === OPS.paintImageXObject || fnId === OPS.paintJpegXObject) {
+      if (fnId === OPS.paintImageXObject) {
         const imageName = args[0] as string
         
         if (seenImages.has(imageName)) continue
@@ -295,35 +296,38 @@ async function imageDataToDataURL(
   }
   
   // Handle different data formats
-  let imageData: ImageData
+  let rgbaData: Uint8ClampedArray
   
   if (data.length === width * height * 4) {
-    // RGBA format
-    imageData = new ImageData(data, width, height)
+    // RGBA format - use directly
+    rgbaData = data
   } else if (data.length === width * height * 3) {
     // RGB format - need to convert to RGBA
-    const rgba = new Uint8ClampedArray(width * height * 4)
+    rgbaData = new Uint8ClampedArray(width * height * 4)
     for (let i = 0, j = 0; i < data.length; i += 3, j += 4) {
-      rgba[j] = data[i]       // R
-      rgba[j + 1] = data[i + 1] // G
-      rgba[j + 2] = data[i + 2] // B
-      rgba[j + 3] = 255         // A
+      rgbaData[j] = data[i]       // R
+      rgbaData[j + 1] = data[i + 1] // G
+      rgbaData[j + 2] = data[i + 2] // B
+      rgbaData[j + 3] = 255         // A
     }
-    imageData = new ImageData(rgba, width, height)
   } else if (data.length === width * height) {
     // Grayscale - convert to RGBA
-    const rgba = new Uint8ClampedArray(width * height * 4)
+    rgbaData = new Uint8ClampedArray(width * height * 4)
     for (let i = 0, j = 0; i < data.length; i++, j += 4) {
-      rgba[j] = data[i]       // R
-      rgba[j + 1] = data[i]   // G
-      rgba[j + 2] = data[i]   // B
-      rgba[j + 3] = 255       // A
+      rgbaData[j] = data[i]       // R
+      rgbaData[j + 1] = data[i]   // G
+      rgbaData[j + 2] = data[i]   // B
+      rgbaData[j + 3] = 255       // A
     }
-    imageData = new ImageData(rgba, width, height)
   } else {
     throw new Error(`Unknown image data format: ${data.length} bytes for ${width}x${height}`)
   }
   
+  // Create ImageData and draw to canvas
+  // Create a fresh Uint8ClampedArray to avoid SharedArrayBuffer issues
+  const safeRgbaData = new Uint8ClampedArray(width * height * 4)
+  safeRgbaData.set(rgbaData)
+  const imageData = new ImageData(safeRgbaData, width, height)
   ctx.putImageData(imageData, 0, 0)
   return canvas.toDataURL('image/png')
 }
@@ -354,23 +358,24 @@ export async function extractContentFromPDF(file: File): Promise<PDFExtractionRe
   
   let fullText = ''
   const allImages: ExtractedImage[] = []
-  const pageTextItems: { pageNum: number; items: TextItemWithPosition[] }[] = []
   
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)
     
     // Extract text with position data
     const textContent = await page.getTextContent()
-    const textItems = textContent.items
-      .filter((item): item is TextItemWithPosition => 'str' in item && 'transform' in item)
-      .map(item => ({
-        str: item.str,
-        transform: item.transform as number[],
-        width: item.width as number,
-        height: item.height as number
-      }))
+    const textItems: TextItemWithPosition[] = []
     
-    pageTextItems.push({ pageNum: i, items: textItems })
+    for (const item of textContent.items) {
+      if (isTextItem(item) && item.transform) {
+        textItems.push({
+          str: item.str,
+          transform: item.transform,
+          width: item.width || 0,
+          height: item.height || 0
+        })
+      }
+    }
     
     // Filter by position and concatenate
     const filteredItems = filterTextItemsByPosition(textItems)
@@ -386,8 +391,6 @@ export async function extractContentFromPDF(file: File): Promise<PDFExtractionRe
   
   // Build content items, interleaving images at page boundaries
   const contentItems: ContentItem[] = []
-  let currentPage = 1
-  const textContentItems = parseTextToContentItems(cleanedText)
   
   // For now, insert images at the beginning of the content
   // A more sophisticated approach would track text positions per page
@@ -403,6 +406,7 @@ export async function extractContentFromPDF(file: File): Promise<PDFExtractionRe
   }
   
   // Add all text content items
+  const textContentItems = parseTextToContentItems(cleanedText)
   contentItems.push(...textContentItems)
   
   return {
@@ -430,14 +434,18 @@ export async function extractSmartContentFromPDF(file: File): Promise<ContentIte
     
     // Extract text
     const textContent = await page.getTextContent()
-    const textItems = textContent.items
-      .filter((item): item is TextItemWithPosition => 'str' in item && 'transform' in item)
-      .map(item => ({
-        str: item.str,
-        transform: item.transform as number[],
-        width: item.width as number,
-        height: item.height as number
-      }))
+    const textItems: TextItemWithPosition[] = []
+    
+    for (const item of textContent.items) {
+      if (isTextItem(item) && item.transform) {
+        textItems.push({
+          str: item.str,
+          transform: item.transform,
+          width: item.width || 0,
+          height: item.height || 0
+        })
+      }
+    }
     
     const filteredItems = filterTextItemsByPosition(textItems)
     const pageText = filteredItems.map(item => item.str).join(' ')

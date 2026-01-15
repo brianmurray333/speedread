@@ -1,16 +1,23 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { extractTextFromPDF, parseTextToWords } from '@/lib/pdfParser'
+import { 
+  extractSmartContentFromPDF, 
+  parseTextToContentItems, 
+  parseTextToWords,
+  ContentItem 
+} from '@/lib/pdfParser'
 
 interface PDFUploaderProps {
   onTextExtracted: (words: string[], title: string, rawText?: string) => void
+  onContentExtracted?: (content: ContentItem[], title: string, rawText?: string) => void
 }
 
-export default function PDFUploader({ onTextExtracted }: PDFUploaderProps) {
+export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDFUploaderProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dragActive, setDragActive] = useState(false)
+  const [extractionProgress, setExtractionProgress] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Generate a title from the first few words of pasted text
@@ -38,7 +45,10 @@ export default function PDFUploader({ onTextExtracted }: PDFUploaderProps) {
     setError(null)
 
     try {
-      const words = parseTextToWords(trimmedText)
+      const contentItems = parseTextToContentItems(trimmedText)
+      const words = contentItems
+        .filter((item): item is { type: 'word'; value: string } => item.type === 'word')
+        .map(item => item.value)
 
       if (words.length === 0) {
         setError('Could not parse any words from the pasted text.')
@@ -53,14 +63,17 @@ export default function PDFUploader({ onTextExtracted }: PDFUploaderProps) {
       }
 
       const title = generateTitleFromText(trimmedText)
+      
+      // Call both callbacks for compatibility
       onTextExtracted(words, title, trimmedText)
+      onContentExtracted?.(contentItems, title, trimmedText)
     } catch (e) {
       console.error('Text parsing error:', e)
       setError('Error processing pasted text. Please try again.')
     } finally {
       setIsLoading(false)
     }
-  }, [onTextExtracted])
+  }, [onTextExtracted, onContentExtracted])
 
   // Global paste event listener
   useEffect(() => {
@@ -90,24 +103,44 @@ export default function PDFUploader({ onTextExtracted }: PDFUploaderProps) {
 
     setIsLoading(true)
     setError(null)
+    setExtractionProgress('Extracting text...')
 
     try {
-      const text = await extractTextFromPDF(file)
-      const words = parseTextToWords(text)
+      // Use smart content extraction for PDFs
+      setExtractionProgress('Extracting text and images...')
+      const contentItems = await extractSmartContentFromPDF(file)
+      
+      const words = contentItems
+        .filter((item): item is { type: 'word'; value: string } => item.type === 'word')
+        .map(item => item.value)
+      
+      const imageCount = contentItems.filter(item => item.type === 'image').length
 
       if (words.length === 0) {
         setError('Could not extract text from this PDF. It may be scanned or image-based.')
         setIsLoading(false)
+        setExtractionProgress(null)
         return
       }
 
       const title = file.name.replace('.pdf', '')
-      onTextExtracted(words, title, text)
+      const rawText = words.join(' ')
+      
+      // Show extraction summary
+      if (imageCount > 0) {
+        setExtractionProgress(`Found ${words.length} words and ${imageCount} image${imageCount > 1 ? 's' : ''}`)
+      }
+
+      // Call both callbacks
+      onTextExtracted(words, title, rawText)
+      onContentExtracted?.(contentItems, title, rawText)
     } catch (e) {
       console.error('PDF parsing error:', e)
       setError('Error reading PDF. Please try another file.')
     } finally {
       setIsLoading(false)
+      // Keep progress message briefly visible
+      setTimeout(() => setExtractionProgress(null), 2000)
     }
   }
 
@@ -162,7 +195,9 @@ export default function PDFUploader({ onTextExtracted }: PDFUploaderProps) {
         {isLoading ? (
           <div className="flex flex-col items-center gap-4">
             <div className="w-12 h-12 border-4 border-[color:var(--accent)] border-t-transparent rounded-full animate-spin" />
-            <p className="text-[color:var(--muted)]">Processing text...</p>
+            <p className="text-[color:var(--muted)]">
+              {extractionProgress || 'Processing...'}
+            </p>
           </div>
         ) : (
           <>
@@ -180,6 +215,9 @@ export default function PDFUploader({ onTextExtracted }: PDFUploaderProps) {
             </p>
             <p className="text-[color:var(--muted)] text-sm sm:text-base">
               Tap to browse, or paste text anywhere
+            </p>
+            <p className="text-[color:var(--muted)] text-xs mt-2">
+              Images and charts will be shown inline
             </p>
           </>
         )}

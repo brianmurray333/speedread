@@ -228,15 +228,46 @@ export default function SpeedReader({
     const after = currentWord.slice(orpIndex + 1)
 
     return (
-      <div className="w-full flex justify-center">
-        {/* Three-column layout: before | ORP | after */}
-        <span className="text-[color:var(--foreground)] text-right inline-block" style={{ minWidth: '40%' }}>
-          {before}
-        </span>
-        <span className="text-[color:var(--accent)] font-semibold">{orp}</span>
-        <span className="text-[color:var(--foreground)] text-left inline-block" style={{ minWidth: '40%' }}>
-          {after}
-        </span>
+      <div className="relative w-full h-[1.2em] overflow-hidden">
+        {/* ORP letter is fixed at center, before/after extend from it */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          {/* Before text - positioned to the left of center, right-aligned */}
+          <span 
+            className="absolute text-[color:var(--foreground)] whitespace-nowrap text-right"
+            style={{ 
+              right: '50%',
+              marginRight: '0.3em', // Half of typical character width for ORP
+            }}
+          >
+            {before}
+          </span>
+          {/* ORP letter - fixed at center */}
+          <span className="text-[color:var(--accent)] font-semibold relative z-10">{orp}</span>
+          {/* After text - positioned to the right of center, left-aligned */}
+          <span 
+            className="absolute text-[color:var(--foreground)] whitespace-nowrap text-left"
+            style={{ 
+              left: '50%',
+              marginLeft: '0.3em', // Half of typical character width for ORP
+            }}
+          >
+            {after}
+          </span>
+        </div>
+        {/* Left fade mask for overflow */}
+        <div 
+          className="absolute left-0 top-0 bottom-0 w-20 pointer-events-none z-20"
+          style={{ 
+            background: 'linear-gradient(to right, var(--background), transparent)' 
+          }}
+        />
+        {/* Right fade mask for overflow */}
+        <div 
+          className="absolute right-0 top-0 bottom-0 w-20 pointer-events-none z-20"
+          style={{ 
+            background: 'linear-gradient(to left, var(--background), transparent)' 
+          }}
+        />
       </div>
     )
   }
