@@ -35,37 +35,72 @@ function HomeContent() {
     return generatedTitle || 'Shared Text'
   }
 
-  // Check for URL text parameter and auto-start reading
+  // Process text and start reading
+  const processAndStartReading = (text: string) => {
+    const trimmedText = text.trim()
+    const contentItems = parseTextToContentItems(trimmedText)
+    const extractedWords = contentItems
+      .filter((item): item is { type: 'word'; value: string } => item.type === 'word')
+      .map(item => item.value)
+    
+    if (extractedWords.length >= 3) {
+      // Mark intro as seen
+      localStorage.setItem('speedread-intro-seen', 'true')
+      
+      setContent(contentItems)
+      setWords(extractedWords)
+      setTitle(generateTitleFromText(trimmedText))
+      setTextContent(trimmedText)
+      setShowIntro(false)
+      setIsReading(true)
+      
+      // Clean up the URL
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', '/')
+      }
+      return true
+    }
+    return false
+  }
+
+  // Check for URL parameters and auto-start reading
   useEffect(() => {
     if (urlTextProcessed) return
     
+    // Check for ?text= parameter (text passed directly in URL)
     const sharedText = searchParams.get('text')
     if (sharedText && sharedText.trim().length > 0) {
       setUrlTextProcessed(true)
+      processAndStartReading(sharedText)
+      return
+    }
+    
+    // Check for ?paste=true parameter (read from clipboard)
+    const shouldPaste = searchParams.get('paste')
+    if (shouldPaste === 'true') {
+      setUrlTextProcessed(true)
       
-      // Mark intro as seen for users coming via shortcut
-      localStorage.setItem('speedread-intro-seen', 'true')
-      
-      const trimmedText = sharedText.trim()
-      const contentItems = parseTextToContentItems(trimmedText)
-      const extractedWords = contentItems
-        .filter((item): item is { type: 'word'; value: string } => item.type === 'word')
-        .map(item => item.value)
-      
-      if (extractedWords.length >= 3) {
-        setContent(contentItems)
-        setWords(extractedWords)
-        setTitle(generateTitleFromText(trimmedText))
-        setTextContent(trimmedText)
-        setShowIntro(false)
-        // Auto-start reading immediately
-        setIsReading(true)
-        
-        // Clean up the URL without triggering a reload
-        if (typeof window !== 'undefined') {
-          window.history.replaceState({}, '', '/')
-        }
+      // Read from clipboard
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
+        navigator.clipboard.readText()
+          .then(clipboardText => {
+            if (clipboardText && clipboardText.trim().length > 0) {
+              processAndStartReading(clipboardText)
+            } else {
+              // No text in clipboard, just show home page
+              localStorage.setItem('speedread-intro-seen', 'true')
+              setShowIntro(false)
+              window.history.replaceState({}, '', '/')
+            }
+          })
+          .catch(() => {
+            // Clipboard access denied, show home page
+            localStorage.setItem('speedread-intro-seen', 'true')
+            setShowIntro(false)
+            window.history.replaceState({}, '', '/')
+          })
       }
+      return
     }
   }, [searchParams, urlTextProcessed])
 
