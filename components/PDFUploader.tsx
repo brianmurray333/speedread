@@ -7,6 +7,7 @@ import {
   parseTextToWords,
   ContentItem 
 } from '@/lib/pdfParser'
+import { useToast } from './Toast'
 
 interface PDFUploaderProps {
   onTextExtracted: (words: string[], title: string, rawText?: string) => void
@@ -15,12 +16,12 @@ interface PDFUploaderProps {
 
 export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDFUploaderProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [dragActive, setDragActive] = useState(false)
   const [extractionProgress, setExtractionProgress] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [clipboardSupported, setClipboardSupported] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { showToast, ToastContainer } = useToast()
 
   // Detect mobile and clipboard API support
   useEffect(() => {
@@ -59,12 +60,11 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
     const trimmedText = text.trim()
     
     if (trimmedText.length === 0) {
-      setError('No text found in clipboard')
+      showToast('No text found in clipboard', 'warning')
       return
     }
 
     setIsLoading(true)
-    setError(null)
 
     try {
       const contentItems = parseTextToContentItems(trimmedText)
@@ -73,13 +73,13 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
         .map(item => item.value)
 
       if (words.length === 0) {
-        setError('Could not parse any words from the pasted text.')
+        showToast('Could not parse any words from the pasted text', 'error')
         setIsLoading(false)
         return
       }
 
       if (words.length < 10) {
-        setError('Please paste more text (at least 10 words) for a meaningful speed read.')
+        showToast('Please paste more text (at least 10 words)', 'warning')
         setIsLoading(false)
         return
       }
@@ -91,18 +91,18 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
       onContentExtracted?.(contentItems, title, trimmedText)
     } catch (e) {
       console.error('Text parsing error:', e)
-      setError('Error processing pasted text. Please try again.')
+      showToast('Error processing pasted text. Please try again', 'error')
     } finally {
       setIsLoading(false)
     }
-  }, [onTextExtracted, onContentExtracted])
+  }, [onTextExtracted, onContentExtracted, showToast])
 
   // Handle paste button click (for mobile)
   const handlePasteClick = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation() // Prevent triggering file input
     
     if (!clipboardSupported) {
-      setError('Clipboard access not supported. Please copy text and use Ctrl+V / Cmd+V.')
+      showToast('Clipboard access not supported', 'error')
       return
     }
 
@@ -111,14 +111,14 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
       if (text && text.trim().length > 0) {
         handlePastedText(text)
       } else {
-        setError('Clipboard is empty. Copy some text first!')
+        showToast('Clipboard is empty. Copy some text first!', 'warning')
       }
     } catch (err) {
       // Permission denied or other error
       console.error('Clipboard read error:', err)
-      setError('Could not access clipboard. Please allow clipboard access or paste manually.')
+      showToast('Could not access clipboard. Please allow access', 'error')
     }
-  }, [clipboardSupported, handlePastedText])
+  }, [clipboardSupported, handlePastedText, showToast])
 
   // Global paste event listener
   useEffect(() => {
@@ -142,12 +142,11 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
 
   const handleFile = async (file: File) => {
     if (file.type !== 'application/pdf') {
-      setError('Please upload a PDF file')
+      showToast('Please upload a PDF file', 'error')
       return
     }
 
     setIsLoading(true)
-    setError(null)
     setExtractionProgress('Extracting text...')
 
     try {
@@ -162,7 +161,7 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
       const imageCount = contentItems.filter(item => item.type === 'image').length
 
       if (words.length === 0) {
-        setError('Could not extract text from this PDF. It may be scanned or image-based.')
+        showToast('Could not extract text from this PDF', 'error')
         setIsLoading(false)
         setExtractionProgress(null)
         return
@@ -181,7 +180,7 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
       onContentExtracted?.(contentItems, title, rawText)
     } catch (e) {
       console.error('PDF parsing error:', e)
-      setError('Error reading PDF. Please try another file.')
+      showToast('Error reading PDF. Please try another file', 'error')
     } finally {
       setIsLoading(false)
       // Keep progress message briefly visible
@@ -214,62 +213,84 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
   }
 
   return (
-    <div className="w-full max-w-xl mx-auto">
-      <div
-        className={`
-          relative border-2 border-dashed rounded-xl p-8 sm:p-12 text-center transition-all duration-200
-          ${dragActive 
-            ? 'border-[color:var(--accent)] bg-[color:var(--accent-glow)]' 
-            : 'border-[color:var(--border)] hover:border-[color:var(--muted)]'
-          }
-          ${isLoading ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}
-        `}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onClick={() => fileInputRef.current?.click()}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf"
-          onChange={handleInputChange}
-          className="hidden"
-        />
+    <>
+      <ToastContainer />
+      <div className="w-full max-w-xl mx-auto">
+        <div
+          className={`
+            relative border-2 border-dashed rounded-xl p-8 sm:p-12 text-center transition-all duration-200
+            ${dragActive 
+              ? 'border-[color:var(--accent)] bg-[color:var(--accent-glow)]' 
+              : 'border-[color:var(--border)] hover:border-[color:var(--muted)]'
+            }
+            ${isLoading ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}
+          `}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf"
+            onChange={handleInputChange}
+            className="hidden"
+          />
 
-        {isLoading ? (
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-4 border-[color:var(--accent)] border-t-transparent rounded-full animate-spin" />
-            <p className="text-[color:var(--muted)]">
-              {extractionProgress || 'Processing...'}
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Mobile-optimized layout with prominent paste button */}
-            {isMobile && clipboardSupported ? (
-              <div className="flex flex-col items-center gap-4">
-                {/* Paste button - prominent on mobile */}
-                <button
-                  onClick={handlePasteClick}
-                  className="w-full py-4 px-6 bg-[color:var(--accent)] text-white rounded-xl font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-3 text-lg"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                  Paste from Clipboard
-                </button>
+          {isLoading ? (
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-12 h-12 border-4 border-[color:var(--accent)] border-t-transparent rounded-full animate-spin" />
+              <p className="text-[color:var(--muted)]">
+                {extractionProgress || 'Processing...'}
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Mobile-optimized layout with prominent paste button */}
+              {isMobile && clipboardSupported ? (
+                <div className="flex flex-col items-center gap-4">
+                  {/* Paste button - prominent on mobile */}
+                  <button
+                    onClick={handlePasteClick}
+                    className="w-full py-4 px-6 bg-[color:var(--accent)] text-white rounded-xl font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-3 text-lg"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    Paste from Clipboard
+                  </button>
 
-                <div className="flex items-center gap-3 w-full">
-                  <div className="flex-1 h-px bg-[color:var(--border)]" />
-                  <span className="text-[color:var(--muted)] text-sm">or</span>
-                  <div className="flex-1 h-px bg-[color:var(--border)]" />
+                  <div className="flex items-center gap-3 w-full">
+                    <div className="flex-1 h-px bg-[color:var(--border)]" />
+                    <span className="text-[color:var(--muted)] text-sm">or</span>
+                    <div className="flex-1 h-px bg-[color:var(--border)]" />
+                  </div>
+
+                  {/* Browse for PDF - secondary on mobile */}
+                  <div className="text-center">
+                    <svg 
+                      className="w-10 h-10 mx-auto mb-2 text-[color:var(--muted)]" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="1.5" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                    </svg>
+                    <p className="text-base font-medium mb-1">
+                      Tap to browse PDFs
+                    </p>
+                    <p className="text-[color:var(--muted)] text-xs">
+                      Images and charts will be shown inline
+                    </p>
+                  </div>
                 </div>
-
-                {/* Browse for PDF - secondary on mobile */}
-                <div className="text-center">
+              ) : (
+                /* Desktop layout - original design */
+                <>
                   <svg 
-                    className="w-10 h-10 mx-auto mb-2 text-[color:var(--muted)]" 
+                    className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-[color:var(--muted)]" 
                     fill="none" 
                     stroke="currentColor" 
                     strokeWidth="1.5" 
@@ -277,46 +298,21 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                   </svg>
-                  <p className="text-base font-medium mb-1">
-                    Tap to browse PDFs
+                  <p className="text-base sm:text-lg font-medium mb-1 sm:mb-2">
+                    Drop a PDF or paste text
                   </p>
-                  <p className="text-[color:var(--muted)] text-xs">
+                  <p className="text-[color:var(--muted)] text-sm sm:text-base">
+                    {clipboardSupported ? 'Click to browse, or paste text anywhere (Ctrl/Cmd+V)' : 'Click to browse files'}
+                  </p>
+                  <p className="text-[color:var(--muted)] text-xs mt-2">
                     Images and charts will be shown inline
                   </p>
-                </div>
-              </div>
-            ) : (
-              /* Desktop layout - original design */
-              <>
-                <svg 
-                  className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-[color:var(--muted)]" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="1.5" 
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                </svg>
-                <p className="text-base sm:text-lg font-medium mb-1 sm:mb-2">
-                  Drop a PDF or paste text
-                </p>
-                <p className="text-[color:var(--muted)] text-sm sm:text-base">
-                  {clipboardSupported ? 'Click to browse, or paste text anywhere (Ctrl/Cmd+V)' : 'Click to browse files'}
-                </p>
-                <p className="text-[color:var(--muted)] text-xs mt-2">
-                  Images and charts will be shown inline
-                </p>
-              </>
-            )}
-          </>
-        )}
-      </div>
-
-      {error && (
-        <div className="mt-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-center">
-          {error}
+                </>
+              )}
+            </>
+          )}
         </div>
-      )}
-    </div>
+      </div>
+    </>
   )
 }

@@ -7,6 +7,8 @@ import PDFUploader from '@/components/PDFUploader'
 import SpeedReader from '@/components/SpeedReader'
 import IntroReader from '@/components/IntroReader'
 import PublishModal from '@/components/PublishModal'
+import MobileBottomNav from '@/components/MobileBottomNav'
+import BitcoinInfoSection from '@/components/BitcoinInfoSection'
 import Link from 'next/link'
 import { ContentItem, parseTextToContentItems } from '@/lib/pdfParser'
 
@@ -280,11 +282,11 @@ function HomeContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[color:var(--background)]">
+    <div className="min-h-screen bg-[color:var(--background)] pb-20 sm:pb-0">
       <Header />
       
       {/* Hero Section */}
-      <section className="pt-24 sm:pt-32 pb-12 sm:pb-20 px-4 sm:px-6">
+      <section className="pt-12 sm:pt-32 pb-12 sm:pb-20 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 sm:mb-6 leading-tight">
             Read <span className="text-[color:var(--accent)]">faster</span>,<br />
@@ -309,41 +311,8 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="py-12 sm:py-16 px-4 sm:px-6 border-t border-b border-[color:var(--border)]">
-        <div className="max-w-4xl mx-auto grid grid-cols-3 gap-4 sm:gap-8 text-center">
-          <div>
-            <div className="text-2xl sm:text-4xl font-bold text-[color:var(--accent)] mb-1 sm:mb-2">2-3x</div>
-            <div className="text-[color:var(--muted)] text-xs sm:text-base">Faster reading</div>
-          </div>
-          <div>
-            <div className="text-2xl sm:text-4xl font-bold text-[color:var(--accent)] mb-1 sm:mb-2">300+</div>
-            <div className="text-[color:var(--muted)] text-xs sm:text-base">Words/minute</div>
-          </div>
-          <div>
-            <div className="text-2xl sm:text-4xl font-bold text-[color:var(--accent)] mb-1 sm:mb-2">0</div>
-            <div className="text-[color:var(--muted)] text-xs sm:text-base">Distractions</div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-12 sm:py-20 px-4 sm:px-6 bg-[color:var(--surface)] border-t border-[color:var(--border)]">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6">
-            Ready to read <span className="text-[color:var(--accent)]">faster</span>?
-          </h2>
-          <p className="text-[color:var(--muted)] text-base sm:text-lg mb-6 sm:mb-8">
-            Upload your first PDF and experience the difference.
-          </p>
-          <button 
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="btn-primary text-lg px-8 py-4"
-          >
-            Get Started — It&apos;s Free
-          </button>
-        </div>
-      </section>
+      {/* Bitcoin Info Section - Mobile Only */}
+      <BitcoinInfoSection />
 
       {/* Footer */}
       <footer className="py-6 sm:py-8 px-4 sm:px-6 border-t border-[color:var(--border)]">
@@ -364,6 +333,9 @@ function HomeContent() {
           </div>
         </div>
       </footer>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   )
 }

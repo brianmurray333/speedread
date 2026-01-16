@@ -6,6 +6,7 @@ import { getSupabase, Document } from '@/lib/supabase'
 import Header from '@/components/Header'
 import SpeedReader from '@/components/SpeedReader'
 import PaymentModal from '@/components/PaymentModal'
+import MobileBottomNav from '@/components/MobileBottomNav'
 import { parseTextToContentItems, ContentItem } from '@/lib/pdfParser'
 
 // Store paid document macaroons in memory (would use localStorage in production)
@@ -229,10 +230,10 @@ function LibraryContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[color:var(--background)]">
+    <div className="min-h-screen bg-[color:var(--background)] pb-20 sm:pb-0">
       <Header />
       
-      <main className="pt-20 sm:pt-24 pb-12 sm:pb-16 px-4 sm:px-6">
+      <main className="pt-12 sm:pt-24 pb-12 sm:pb-16 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8 sm:mb-12">
             <h1 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">
@@ -337,6 +338,9 @@ function LibraryContent() {
         documentId={paymentDoc?.id || ''}
         documentTitle={paymentDoc?.title || ''}
       />
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   )
 }
