@@ -82,10 +82,35 @@ function HomeContent() {
     if (shouldPaste === 'true') {
       setUrlTextProcessed(true)
       
-      // Read from clipboard
+      // Read from clipboard with improved permission handling
       if (typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
-        navigator.clipboard.readText()
-          .then(clipboardText => {
+        const attemptClipboardRead = async () => {
+          try {
+            // Check if Permissions API is available
+            if ('permissions' in navigator && 'query' in navigator.permissions) {
+              try {
+                // Check current clipboard-read permission status
+                const permissionStatus = await navigator.permissions.query({ 
+                  name: 'clipboard-read' as PermissionName 
+                })
+                
+                // If permission is denied, show home page
+                if (permissionStatus.state === 'denied') {
+                  console.log('Clipboard permission denied')
+                  localStorage.setItem('speedread-intro-seen', 'true')
+                  setShowIntro(false)
+                  window.history.replaceState({}, '', '/')
+                  return
+                }
+              } catch (permErr) {
+                // Permissions API query failed, continue to attempt read
+                console.log('Permission query not supported, attempting direct read')
+              }
+            }
+            
+            // Attempt to read from clipboard
+            const clipboardText = await navigator.clipboard.readText()
+            
             if (clipboardText && clipboardText.trim().length > 0) {
               processAndStartReading(clipboardText)
             } else {
@@ -94,13 +119,16 @@ function HomeContent() {
               setShowIntro(false)
               window.history.replaceState({}, '', '/')
             }
-          })
-          .catch(() => {
-            // Clipboard access denied, show home page
+          } catch (err) {
+            // Clipboard access denied or error, show home page
+            console.error('Clipboard read error:', err)
             localStorage.setItem('speedread-intro-seen', 'true')
             setShowIntro(false)
             window.history.replaceState({}, '', '/')
-          })
+          }
+        }
+        
+        attemptClipboardRead()
       }
       return
     }

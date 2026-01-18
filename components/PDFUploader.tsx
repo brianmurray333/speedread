@@ -107,7 +107,43 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
     }
 
     try {
+      // Check if Permissions API is available (not supported in all browsers)
+      if ('permissions' in navigator && 'query' in navigator.permissions) {
+        try {
+          // Check current clipboard-read permission status
+          const permissionStatus = await navigator.permissions.query({ 
+            name: 'clipboard-read' as PermissionName 
+          })
+          
+          // If permission already granted, read directly
+          if (permissionStatus.state === 'granted') {
+            const text = await navigator.clipboard.readText()
+            if (text && text.trim().length > 0) {
+              handlePastedText(text)
+            } else {
+              showToast('Clipboard is empty. Copy some text first!', 'warning')
+            }
+            return
+          }
+          
+          // If permission is denied, show helpful message
+          if (permissionStatus.state === 'denied') {
+            showToast('Clipboard access denied. Please enable it in your browser settings', 'error')
+            return
+          }
+        } catch (permErr) {
+          // Permissions API query failed (might not support clipboard-read query)
+          // Fall through to direct clipboard read
+          console.log('Permission query not supported, attempting direct read')
+        }
+      }
+      
+      // For browsers without Permissions API or when permission is 'prompt'
+      // Attempt to read directly - this will trigger the permission prompt
       const text = await navigator.clipboard.readText()
+      
+      // If we get here, permission was granted and we have the text
+      // This should now auto-paste without requiring a second button click
       if (text && text.trim().length > 0) {
         handlePastedText(text)
       } else {
@@ -116,7 +152,16 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
     } catch (err) {
       // Permission denied or other error
       console.error('Clipboard read error:', err)
-      showToast('Could not access clipboard. Please allow access', 'error')
+      
+      // Provide more specific error messages
+      const errorMessage = (err as Error).message || ''
+      if (errorMessage.includes('denied') || errorMessage.includes('permission')) {
+        showToast('Clipboard access denied. Please allow access and try again', 'error')
+      } else if (errorMessage.includes('gesture') || errorMessage.includes('user activation')) {
+        showToast('Please try clicking the paste button again', 'warning')
+      } else {
+        showToast('Could not access clipboard. Please try again', 'error')
+      }
     }
   }, [clipboardSupported, handlePastedText, showToast])
 
