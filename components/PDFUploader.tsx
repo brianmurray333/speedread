@@ -55,8 +55,66 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
     return title || 'Pasted Text'
   }
 
+  // Check if text is a URL
+  const isUrl = (text: string): boolean => {
+    try {
+      const url = new URL(text.trim())
+      return ['http:', 'https:'].includes(url.protocol)
+    } catch {
+      return false
+    }
+  }
+
+  // Handle URL parsing
+  const handleUrlSubmit = async (url: string) => {
+    setIsLoading(true)
+    setExtractionProgress('Fetching article...')
+
+    try {
+      const response = await fetch('/api/url/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        showToast(data.error || 'Failed to parse URL', 'error')
+        setIsLoading(false)
+        setExtractionProgress(null)
+        return
+      }
+
+      setExtractionProgress(`Extracted ${data.wordCount.toLocaleString()} words from ${data.siteName}`)
+
+      // Parse the extracted text
+      const contentItems = parseTextToContentItems(data.textContent)
+      const words = contentItems
+        .filter((item): item is { type: 'word'; value: string } => item.type === 'word')
+        .map(item => item.value)
+
+      if (words.length === 0) {
+        showToast('Could not extract readable text from this URL', 'error')
+        setIsLoading(false)
+        setExtractionProgress(null)
+        return
+      }
+
+      // Call callbacks with extracted data
+      onTextExtracted(words, data.title, data.textContent)
+      onContentExtracted?.(contentItems, data.title, data.textContent)
+    } catch (e) {
+      console.error('URL parsing error:', e)
+      showToast('Error parsing URL. Please try again', 'error')
+    } finally {
+      setIsLoading(false)
+      setTimeout(() => setExtractionProgress(null), 2000)
+    }
+  }
+
   // Handle pasted text
-  const handlePastedText = useCallback((text: string) => {
+  const handlePastedText = useCallback(async (text: string) => {
     const trimmedText = text.trim()
     
     if (trimmedText.length === 0) {
@@ -64,7 +122,15 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
       return
     }
 
+    // Check if it's a URL
+    if (isUrl(trimmedText)) {
+      // Parse as URL
+      await handleUrlSubmit(trimmedText)
+      return
+    }
+
     setIsLoading(true)
+    setExtractionProgress('Processing text...')
 
     try {
       const contentItems = parseTextToContentItems(trimmedText)
@@ -75,12 +141,14 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
       if (words.length === 0) {
         showToast('Could not parse any words from the pasted text', 'error')
         setIsLoading(false)
+        setExtractionProgress(null)
         return
       }
 
       if (words.length < 10) {
         showToast('Please paste more text (at least 10 words)', 'warning')
         setIsLoading(false)
+        setExtractionProgress(null)
         return
       }
 
@@ -94,6 +162,7 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
       showToast('Error processing pasted text. Please try again', 'error')
     } finally {
       setIsLoading(false)
+      setExtractionProgress(null)
     }
   }, [onTextExtracted, onContentExtracted, showToast])
 
@@ -326,9 +395,6 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
                     <p className="text-base font-medium mb-1">
                       Tap to browse PDFs
                     </p>
-                    <p className="text-[color:var(--muted)] text-xs">
-                      Images and charts will be shown inline
-                    </p>
                   </div>
                 </div>
               ) : (
@@ -344,13 +410,10 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                   </svg>
                   <p className="text-base sm:text-lg font-medium mb-1 sm:mb-2">
-                    Drop a PDF or paste text
+                    Drop a PDF, paste text, or paste a URL
                   </p>
                   <p className="text-[color:var(--muted)] text-sm sm:text-base">
-                    {clipboardSupported ? 'Click to browse, or paste text anywhere (Ctrl/Cmd+V)' : 'Click to browse files'}
-                  </p>
-                  <p className="text-[color:var(--muted)] text-xs mt-2">
-                    Images and charts will be shown inline
+                    {clipboardSupported ? 'Click to browse, or paste anywhere (Ctrl/Cmd+V)' : 'Click to browse files'}
                   </p>
                 </>
               )}

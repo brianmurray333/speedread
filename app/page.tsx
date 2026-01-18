@@ -321,8 +321,7 @@ function HomeContent() {
             retain <span className="text-[color:var(--accent)]">more</span>
           </h1>
           <p className="text-lg sm:text-xl text-[color:var(--muted)] mb-8 sm:mb-12 max-w-2xl mx-auto px-2">
-            Upload any PDF and read it word-by-word using the scientifically-backed RSVP technique. 
-            No distractions, maximum focus.
+            Read text, websites or PDFs FAST. Just paste or upload.
           </p>
           
           <PDFUploader 
