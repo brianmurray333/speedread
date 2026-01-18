@@ -31,16 +31,58 @@ export default function MobileBottomNav({ onPaste, onUpload }: MobileBottomNavPr
       // Try to read from clipboard directly
       if (typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
         try {
+          // Check if Permissions API is available
+          if ('permissions' in navigator && 'query' in navigator.permissions) {
+            try {
+              // Check current clipboard-read permission status
+              const permissionStatus = await navigator.permissions.query({ 
+                name: 'clipboard-read' as PermissionName 
+              })
+              
+              // If permission already granted, read directly
+              if (permissionStatus.state === 'granted') {
+                const text = await navigator.clipboard.readText()
+                if (text && text.trim().length > 0) {
+                  router.push('/?paste=true')
+                } else {
+                  showToast('Clipboard is empty. Copy some text first!', 'warning')
+                }
+                return
+              }
+              
+              // If permission is denied, show helpful message
+              if (permissionStatus.state === 'denied') {
+                showToast('Clipboard access denied. Please enable it in your browser settings', 'error')
+                return
+              }
+            } catch (permErr) {
+              // Permissions API query failed (might not support clipboard-read query)
+              console.log('Permission query not supported, attempting direct read')
+            }
+          }
+          
+          // For browsers without Permissions API or when permission is 'prompt'
+          // Attempt to read directly - this will trigger the permission prompt
           const text = await navigator.clipboard.readText()
+          
+          // If we get here, permission was granted and we have the text
           if (text && text.trim().length > 0) {
-            // Navigate to home with the text
             router.push('/?paste=true')
           } else {
             showToast('Clipboard is empty. Copy some text first!', 'warning')
           }
         } catch (err) {
           console.error('Clipboard read error:', err)
-          showToast('Could not access clipboard. Please allow access', 'error')
+          
+          // Provide more specific error messages
+          const errorMessage = (err as Error).message || ''
+          if (errorMessage.includes('denied') || errorMessage.includes('permission')) {
+            showToast('Clipboard access denied. Please allow access and try again', 'error')
+          } else if (errorMessage.includes('gesture') || errorMessage.includes('user activation')) {
+            showToast('Please try tapping the paste button again', 'warning')
+          } else {
+            showToast('Could not access clipboard. Please try again', 'error')
+          }
         }
       } else {
         showToast('Clipboard access not supported', 'error')
