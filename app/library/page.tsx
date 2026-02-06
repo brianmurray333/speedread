@@ -39,32 +39,23 @@ function LibraryContent() {
   const [paymentDoc, setPaymentDoc] = useState<Document | null>(null)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
 
-  const fetchDocuments = async () => {
+  // Fetch text_content for a specific document (only when actually reading)
+  const fetchDocumentContent = async (docId: string): Promise<string | null> => {
     try {
-      // Only fetch columns needed for listing - NOT text_content (which can be huge)
       const { data, error } = await getSupabase()
         .from('documents')
-        .select('id, title, word_count, price_sats, creator_name, created_at, is_public')
-        .eq('is_public', true)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Error fetching documents:', error)
-        return
+        .select('text_content')
+        .eq('id', docId)
+        .single()
+      
+      if (error || !data) {
+        console.error('Error fetching document content:', error)
+        return null
       }
-
-      // Sort Bitcoin whitepaper to the top
-      const sorted = (data || []).sort((a, b) => {
-        if (a.title.includes('Bitcoin')) return -1
-        if (b.title.includes('Bitcoin')) return 1
-        return 0
-      })
-
-      setDocuments(sorted)
+      return data.text_content
     } catch (e) {
-      console.error('Error:', e)
-    } finally {
-      setLoading(false)
+      console.error('Error fetching document content:', e)
+      return null
     }
   }
 
@@ -87,8 +78,11 @@ function LibraryContent() {
         }
       }
     } else {
-      // Free document - read directly with smart parsing
-      const docContent = parseTextToContentItems(doc.text_content)
+      // Free document - fetch text_content then read
+      const textContent = await fetchDocumentContent(doc.id)
+      if (!textContent) return
+      
+      const docContent = parseTextToContentItems(textContent)
       setContent(docContent)
       setSelectedDoc(doc)
       setIsReading(true)
@@ -174,93 +168,52 @@ function LibraryContent() {
   const isPaid = (doc: Document) => paidDocuments.has(doc.id)
 
   // Handle direct read via URL parameter (for shared links)
-  const handleDirectRead = useCallback(async (slug: string) => {
-    try {
-      // Fetch all public documents and find by slug match
-      const { data, error } = await getSupabase()
-        .from('documents')
-        .select('*')
-        .eq('is_public', true)
-
-      if (error || !data) {
-        console.error('Error fetching documents:', error)
-        return
-      }
-
-      // Find document by matching slug
-      const doc = data.find(d => matchesSlug(d.title, slug))
-      if (!doc) {
-        console.error('Document not found for slug:', slug)
-        return
-      }
-
-      // Load paid docs from localStorage first
-      if (typeof window !== 'undefined') {
-        const stored = localStorage.getItem('speedread_paid_docs')
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          Object.entries(parsed).forEach(([id, macaroon]) => {
-            paidDocuments.set(id, macaroon as string)
-          })
-        }
-      }
-
-      // Now handle the document
-      await handleReadDocument(doc)
-    } catch (e) {
-      console.error('Error fetching document for direct read:', e)
+  // Takes the already-fetched documents list to avoid re-fetching
+  const handleDirectRead = useCallback(async (slug: string, docs: Document[]) => {
+    // Find document by matching slug from already-fetched list
+    const doc = docs.find(d => matchesSlug(d.title, slug))
+    if (!doc) {
+      console.error('Document not found for slug:', slug)
+      return
     }
+
+    // Free document - fetch text_content then read
+    const textContent = await fetchDocumentContent(doc.id)
+    if (!textContent) return
+    
+    const docContent = parseTextToContentItems(textContent)
+    setContent(docContent)
+    setSelectedDoc(doc)
+    setIsReading(true)
   }, [])
 
   // Handle direct payment modal via URL parameter (for shared payment links)
-  const handleDirectPayment = useCallback(async (slug: string) => {
-    try {
-      // Fetch all public documents and find by slug match
-      const { data, error } = await getSupabase()
-        .from('documents')
-        .select('*')
-        .eq('is_public', true)
+  // Takes the already-fetched documents list to avoid re-fetching
+  const handleDirectPayment = useCallback(async (slug: string, docs: Document[]) => {
+    // Find document by matching slug from already-fetched list
+    const doc = docs.find(d => matchesSlug(d.title, slug))
+    if (!doc) {
+      console.error('Document not found for slug:', slug)
+      return
+    }
 
-      if (error || !data) {
-        console.error('Error fetching documents:', error)
-        return
-      }
-
-      // Find document by matching slug
-      const doc = data.find(d => matchesSlug(d.title, slug))
-      if (!doc) {
-        console.error('Document not found for slug:', slug)
-        return
-      }
-
-      // Load paid docs from localStorage first
-      if (typeof window !== 'undefined') {
-        const stored = localStorage.getItem('speedread_paid_docs')
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          Object.entries(parsed).forEach(([id, macaroon]) => {
-            paidDocuments.set(id, macaroon as string)
-          })
-        }
-      }
-
-      // Check if already paid
-      if (paidDocuments.has(doc.id)) {
-        // Already paid, fetch content directly
-        await fetchPaidContent(doc, paidDocuments.get(doc.id)!)
-      } else if (doc.price_sats && doc.price_sats > 0) {
-        // Show payment modal
-        setPaymentDoc(doc)
-        setShowPaymentModal(true)
-      } else {
-        // Free document, read directly
-        const docContent = parseTextToContentItems(doc.text_content)
-        setContent(docContent)
-        setSelectedDoc(doc)
-        setIsReading(true)
-      }
-    } catch (e) {
-      console.error('Error fetching document for direct payment:', e)
+    // Check if already paid
+    if (paidDocuments.has(doc.id)) {
+      // Already paid, fetch content directly
+      await fetchPaidContent(doc, paidDocuments.get(doc.id)!)
+    } else if (doc.price_sats && doc.price_sats > 0) {
+      // Show payment modal
+      setPaymentDoc(doc)
+      setShowPaymentModal(true)
+    } else {
+      // Free document - fetch text_content then read
+      const textContent = await fetchDocumentContent(doc.id)
+      if (!textContent) return
+      
+      const docContent = parseTextToContentItems(textContent)
+      setContent(docContent)
+      setSelectedDoc(doc)
+      setIsReading(true)
     }
   }, [])
 
@@ -278,20 +231,41 @@ function LibraryContent() {
         }
       }
 
+      // First fetch documents (lightweight, no text_content)
+      let docs: Document[] = []
+      try {
+        const { data, error } = await getSupabase()
+          .from('documents')
+          .select('id, title, word_count, price_sats, creator_name, created_at, is_public')
+          .eq('is_public', true)
+          .order('created_at', { ascending: false })
+
+        if (!error && data) {
+          // Sort Bitcoin whitepaper to the top
+          docs = data.sort((a, b) => {
+            if (a.title.includes('Bitcoin')) return -1
+            if (b.title.includes('Bitcoin')) return 1
+            return 0
+          }) as Document[]
+          setDocuments(docs)
+        }
+      } catch (e) {
+        console.error('Error fetching documents:', e)
+      } finally {
+        setLoading(false)
+      }
+
       // Check for direct read parameter (free documents)
-      const readId = searchParams.get('read')
-      if (readId) {
-        await handleDirectRead(readId)
+      const readSlug = searchParams.get('read')
+      if (readSlug && docs.length > 0) {
+        await handleDirectRead(readSlug, docs)
       }
 
       // Check for direct doc parameter (paid documents - opens payment modal)
-      const docId = searchParams.get('doc')
-      if (docId) {
-        await handleDirectPayment(docId)
+      const docSlug = searchParams.get('doc')
+      if (docSlug && docs.length > 0) {
+        await handleDirectPayment(docSlug, docs)
       }
-
-      // Always fetch documents for the library view
-      await fetchDocuments()
     }
 
     init()
