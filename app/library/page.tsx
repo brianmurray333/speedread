@@ -2,6 +2,9 @@ import { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import LibraryClient, { createSlug, matchesSlug } from './LibraryClient'
 
+// Force dynamic rendering to ensure metadata is generated fresh for each request
+export const dynamic = 'force-dynamic'
+
 type Props = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
