@@ -76,7 +76,31 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
       return getDefaultMetadata()
     }
 
-    // Build description with word count and price
+    // Calculate reading time range (300 WPM slow, 500 WPM fast)
+    const formatReadingTime = (wordCount: number): string => {
+      const fastMinutes = wordCount / 500 // faster reader = less time
+      const slowMinutes = wordCount / 300 // slower reader = more time
+      
+      const formatTime = (minutes: number): string => {
+        if (minutes >= 1) {
+          return `${Math.round(minutes)} min`
+      } else {
+          return `${Math.round(minutes * 60)} sec`
+        }
+      }
+      
+      const fastStr = formatTime(fastMinutes)
+      const slowStr = formatTime(slowMinutes)
+      
+      // If same formatted string, show just one
+      if (fastStr === slowStr) {
+        return fastStr
+      }
+      
+      return `${fastStr} to ${slowStr}`
+    }
+
+    // Build description with word count, price, and reading time
     let description = `${doc.word_count.toLocaleString()} words`
     if (doc.creator_name) {
       description += ` by ${doc.creator_name}`
@@ -86,7 +110,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
     } else {
       description += ' • Free to read'
     }
-    description += ' • Speed read on SpeedRead'
+    description += ` • ${formatReadingTime(doc.word_count)}`
 
     const title = `${doc.title} - SpeedRead`
 
