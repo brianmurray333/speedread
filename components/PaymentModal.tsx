@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import QRCode from 'qrcode'
+import { Share, X } from 'lucide-react'
 
 // WebLN type declarations
 declare global {
@@ -44,6 +45,7 @@ export default function PaymentModal({
   const [error, setError] = useState<string | null>(null)
   const [checking, setChecking] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [urlCopied, setUrlCopied] = useState(false)
   const [hasWebLN, setHasWebLN] = useState(false)
   const [webLNPaying, setWebLNPaying] = useState(false)
 
@@ -193,15 +195,34 @@ export default function PaymentModal({
       
       {/* Modal */}
       <div className="relative bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        {/* Share and Close buttons */}
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+          {/* Share button */}
+          <button
+            onClick={() => {
+              const shareUrl = `${window.location.origin}/library?doc=${documentId}`
+              navigator.clipboard.writeText(shareUrl)
+              setUrlCopied(true)
+              setTimeout(() => setUrlCopied(false), 2000)
+            }}
+            className="text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors relative"
+            title="Copy shareable link"
+          >
+            <Share className="w-5 h-5" />
+            {urlCopied && (
+              <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-xs bg-[color:var(--surface)] border border-[color:var(--border)] px-2 py-1 rounded whitespace-nowrap">
+                Link copied!
+              </span>
+            )}
+          </button>
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
 
         {/* Header */}
         <div className="text-center mb-4 sm:mb-6">

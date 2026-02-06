@@ -60,9 +60,13 @@ function LibraryContent() {
         // Fetch content with macaroon
         await fetchPaidContent(doc, paidDocuments.get(doc.id)!)
       } else {
-        // Show payment modal
+        // Show payment modal and update URL for sharing
         setPaymentDoc(doc)
         setShowPaymentModal(true)
+        // Update URL to be shareable
+        if (typeof window !== 'undefined') {
+          window.history.pushState({}, '', `/library?doc=${doc.id}`)
+        }
       }
     } else {
       // Free document - read directly with smart parsing
@@ -70,6 +74,10 @@ function LibraryContent() {
       setContent(docContent)
       setSelectedDoc(doc)
       setIsReading(true)
+      // Update URL for free documents too
+      if (typeof window !== 'undefined') {
+        window.history.pushState({}, '', `/library?read=${doc.id}`)
+      }
     }
   }
 
@@ -179,6 +187,51 @@ function LibraryContent() {
     }
   }, [])
 
+  // Handle direct payment modal via URL parameter (for shared payment links)
+  const handleDirectPayment = useCallback(async (docId: string) => {
+    try {
+      const { data, error } = await getSupabase()
+        .from('documents')
+        .select('*')
+        .eq('id', docId)
+        .single()
+
+      if (error || !data) {
+        console.error('Document not found:', error)
+        return
+      }
+
+      // Load paid docs from localStorage first
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('speedread_paid_docs')
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          Object.entries(parsed).forEach(([id, macaroon]) => {
+            paidDocuments.set(id, macaroon as string)
+          })
+        }
+      }
+
+      // Check if already paid
+      if (paidDocuments.has(data.id)) {
+        // Already paid, fetch content directly
+        await fetchPaidContent(data, paidDocuments.get(data.id)!)
+      } else if (data.price_sats && data.price_sats > 0) {
+        // Show payment modal
+        setPaymentDoc(data)
+        setShowPaymentModal(true)
+      } else {
+        // Free document, read directly
+        const docContent = parseTextToContentItems(data.text_content)
+        setContent(docContent)
+        setSelectedDoc(data)
+        setIsReading(true)
+      }
+    } catch (e) {
+      console.error('Error fetching document for direct payment:', e)
+    }
+  }, [])
+
   // Fetch documents and check for direct read param
   useEffect(() => {
     const init = async () => {
@@ -193,10 +246,16 @@ function LibraryContent() {
         }
       }
 
-      // Check for direct read parameter
+      // Check for direct read parameter (free documents)
       const readId = searchParams.get('read')
       if (readId) {
         await handleDirectRead(readId)
+      }
+
+      // Check for direct doc parameter (paid documents - opens payment modal)
+      const docId = searchParams.get('doc')
+      if (docId) {
+        await handleDirectPayment(docId)
       }
 
       // Always fetch documents for the library view
@@ -204,7 +263,7 @@ function LibraryContent() {
     }
 
     init()
-  }, [searchParams, handleDirectRead])
+  }, [searchParams, handleDirectRead, handleDirectPayment])
 
   // Get word count for display
   const wordCount = content.filter(item => item.type === 'word').length
@@ -333,6 +392,10 @@ function LibraryContent() {
         onClose={() => {
           setShowPaymentModal(false)
           setPaymentDoc(null)
+          // Clear the URL when closing the modal
+          if (typeof window !== 'undefined') {
+            window.history.replaceState({}, '', '/library')
+          }
         }}
         onPaymentComplete={handlePaymentComplete}
         documentId={paymentDoc?.id || ''}
