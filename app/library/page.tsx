@@ -12,6 +12,21 @@ import { parseTextToContentItems, ContentItem } from '@/lib/pdfParser'
 // Store paid document macaroons in memory (would use localStorage in production)
 const paidDocuments = new Map<string, string>()
 
+// Helper to create URL-friendly slug from title
+function createSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 60)
+}
+
+// Helper to match a slug against a title
+function matchesSlug(title: string, slug: string): boolean {
+  return createSlug(title) === slug
+}
+
 function LibraryContent() {
   const searchParams = useSearchParams()
   const [documents, setDocuments] = useState<Document[]>([])
@@ -26,9 +41,10 @@ function LibraryContent() {
 
   const fetchDocuments = async () => {
     try {
+      // Only fetch columns needed for listing - NOT text_content (which can be huge)
       const { data, error } = await getSupabase()
         .from('documents')
-        .select('*')
+        .select('id, title, word_count, price_sats, creator_name, created_at, is_public')
         .eq('is_public', true)
         .order('created_at', { ascending: false })
 
@@ -53,6 +69,8 @@ function LibraryContent() {
   }
 
   const handleReadDocument = async (doc: Document) => {
+    const slug = createSlug(doc.title)
+    
     // Check if document requires payment
     if (doc.price_sats && doc.price_sats > 0) {
       // Check if already paid
@@ -63,9 +81,9 @@ function LibraryContent() {
         // Show payment modal and update URL for sharing
         setPaymentDoc(doc)
         setShowPaymentModal(true)
-        // Update URL to be shareable
+        // Update URL to be shareable with readable slug
         if (typeof window !== 'undefined') {
-          window.history.pushState({}, '', `/library?doc=${doc.id}`)
+          window.history.pushState({}, '', `/library?doc=${slug}`)
         }
       }
     } else {
@@ -74,9 +92,9 @@ function LibraryContent() {
       setContent(docContent)
       setSelectedDoc(doc)
       setIsReading(true)
-      // Update URL for free documents too
+      // Update URL for free documents too with readable slug
       if (typeof window !== 'undefined') {
-        window.history.pushState({}, '', `/library?read=${doc.id}`)
+        window.history.pushState({}, '', `/library?read=${slug}`)
       }
     }
   }
