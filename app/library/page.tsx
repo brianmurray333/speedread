@@ -174,16 +174,23 @@ function LibraryContent() {
   const isPaid = (doc: Document) => paidDocuments.has(doc.id)
 
   // Handle direct read via URL parameter (for shared links)
-  const handleDirectRead = useCallback(async (docId: string) => {
+  const handleDirectRead = useCallback(async (slug: string) => {
     try {
+      // Fetch all public documents and find by slug match
       const { data, error } = await getSupabase()
         .from('documents')
         .select('*')
-        .eq('id', docId)
-        .single()
+        .eq('is_public', true)
 
       if (error || !data) {
-        console.error('Document not found:', error)
+        console.error('Error fetching documents:', error)
+        return
+      }
+
+      // Find document by matching slug
+      const doc = data.find(d => matchesSlug(d.title, slug))
+      if (!doc) {
+        console.error('Document not found for slug:', slug)
         return
       }
 
@@ -199,23 +206,30 @@ function LibraryContent() {
       }
 
       // Now handle the document
-      await handleReadDocument(data)
+      await handleReadDocument(doc)
     } catch (e) {
       console.error('Error fetching document for direct read:', e)
     }
   }, [])
 
   // Handle direct payment modal via URL parameter (for shared payment links)
-  const handleDirectPayment = useCallback(async (docId: string) => {
+  const handleDirectPayment = useCallback(async (slug: string) => {
     try {
+      // Fetch all public documents and find by slug match
       const { data, error } = await getSupabase()
         .from('documents')
         .select('*')
-        .eq('id', docId)
-        .single()
+        .eq('is_public', true)
 
       if (error || !data) {
-        console.error('Document not found:', error)
+        console.error('Error fetching documents:', error)
+        return
+      }
+
+      // Find document by matching slug
+      const doc = data.find(d => matchesSlug(d.title, slug))
+      if (!doc) {
+        console.error('Document not found for slug:', slug)
         return
       }
 
@@ -231,18 +245,18 @@ function LibraryContent() {
       }
 
       // Check if already paid
-      if (paidDocuments.has(data.id)) {
+      if (paidDocuments.has(doc.id)) {
         // Already paid, fetch content directly
-        await fetchPaidContent(data, paidDocuments.get(data.id)!)
-      } else if (data.price_sats && data.price_sats > 0) {
+        await fetchPaidContent(doc, paidDocuments.get(doc.id)!)
+      } else if (doc.price_sats && doc.price_sats > 0) {
         // Show payment modal
-        setPaymentDoc(data)
+        setPaymentDoc(doc)
         setShowPaymentModal(true)
       } else {
         // Free document, read directly
-        const docContent = parseTextToContentItems(data.text_content)
+        const docContent = parseTextToContentItems(doc.text_content)
         setContent(docContent)
-        setSelectedDoc(data)
+        setSelectedDoc(doc)
         setIsReading(true)
       }
     } catch (e) {
