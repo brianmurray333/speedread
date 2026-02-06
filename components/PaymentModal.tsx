@@ -196,11 +196,18 @@ export default function PaymentModal({
       {/* Modal */}
       <div className="relative bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
         {/* Share and Close buttons */}
-        <div className="absolute top-4 right-4 flex items-center gap-2">
+        <div className="absolute top-4 right-4 flex items-center gap-4">
           {/* Share button */}
           <button
             onClick={() => {
-              const shareUrl = `${window.location.origin}/library?doc=${documentId}`
+              // Create URL-friendly slug from title
+              const slug = documentTitle
+                .toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .slice(0, 60)
+              const shareUrl = `${window.location.origin}/library?doc=${slug}`
               navigator.clipboard.writeText(shareUrl)
               setUrlCopied(true)
               setTimeout(() => setUrlCopied(false), 2000)
