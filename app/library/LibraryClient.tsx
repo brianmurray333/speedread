@@ -8,24 +8,10 @@ import SpeedReader from '@/components/SpeedReader'
 import PaymentModal from '@/components/PaymentModal'
 import MobileBottomNav from '@/components/MobileBottomNav'
 import { parseTextToContentItems, ContentItem } from '@/lib/pdfParser'
+import { createSlug, matchesSlug } from '@/lib/slug'
 
 // Store paid document macaroons in memory (would use localStorage in production)
 const paidDocuments = new Map<string, string>()
-
-// Helper to create URL-friendly slug from title
-export function createSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .slice(0, 60)
-}
-
-// Helper to match a slug against a title
-export function matchesSlug(title: string, slug: string): boolean {
-  return createSlug(title) === slug
-}
 
 function LibraryContent() {
   const searchParams = useSearchParams()

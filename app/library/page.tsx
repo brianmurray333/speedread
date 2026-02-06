@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
-import LibraryClient, { createSlug, matchesSlug } from './LibraryClient'
+import LibraryClient from './LibraryClient'
+import { matchesSlug } from '@/lib/slug'
 
 // Force dynamic rendering to ensure metadata is generated fresh for each request
 export const dynamic = 'force-dynamic'
