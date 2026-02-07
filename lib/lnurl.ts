@@ -17,6 +17,7 @@ interface LNURLPayResponse {
 interface LNURLInvoiceResponse {
   pr: string // payment request (bolt11 invoice)
   routes: unknown[]
+  verify?: string // URL to check payment status
   successAction?: {
     tag: string
     message?: string
@@ -119,7 +120,7 @@ export async function requestInvoiceFromLightningAddress(
   lightningAddress: string,
   amountSats: number,
   comment?: string
-): Promise<{ paymentRequest: string; paymentHash: string }> {
+): Promise<{ paymentRequest: string; paymentHash: string; verifyUrl?: string }> {
   // First, fetch the LNURL-pay metadata
   const payInfo = await fetchLNURLPayInfo(lightningAddress)
 
@@ -172,6 +173,7 @@ export async function requestInvoiceFromLightningAddress(
   return {
     paymentRequest: invoiceData.pr,
     paymentHash,
+    verifyUrl: invoiceData.verify, // URL to poll for payment status
   }
 }
 
@@ -201,6 +203,38 @@ function extractPaymentHash(invoice: string): string {
   } catch (error) {
     console.error('Failed to decode BOLT11 invoice:', error)
     throw new Error('Invalid BOLT11 invoice format')
+  }
+}
+
+/**
+ * Check if an invoice has been paid using the LNURL verify endpoint
+ */
+export async function checkLNURLPaymentStatus(verifyUrl: string): Promise<{
+  paid: boolean
+  preimage?: string
+}> {
+  try {
+    const response = await fetch(verifyUrl, {
+      headers: {
+        'Accept': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      return { paid: false }
+    }
+
+    const data = await response.json()
+    
+    // The verify endpoint returns { settled: true, preimage: "..." } when paid
+    if (data.settled === true) {
+      return { paid: true, preimage: data.preimage }
+    }
+    
+    return { paid: false }
+  } catch (error) {
+    console.error('LNURL verify check failed:', error)
+    return { paid: false }
   }
 }
 
