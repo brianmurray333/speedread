@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createHash } from 'crypto'
 import { checkInvoicePaid } from '@/lib/lnd'
 import { verifyL402Macaroon } from '@/lib/macaroon'
+import { checkLNURLPaymentStatus } from '@/lib/lnurl'
 
 function getSupabase() {
   return createClient(
@@ -22,7 +23,7 @@ function getSupabase() {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { macaroon, documentId, preimage } = await request.json()
+    const { macaroon, documentId, preimage, verifyUrl } = await request.json()
 
     if (!macaroon || !documentId) {
       return NextResponse.json(
@@ -63,9 +64,36 @@ export async function POST(request: NextRequest) {
 
     if (document?.lightning_address) {
       // Creator payment via LNURL-pay
-      // Verify the preimage cryptographically: SHA256(preimage) must equal payment hash
+      
+      // Method 1: Check via LNURL verify URL (preferred - automatic polling)
+      if (verifyUrl) {
+        console.log('Checking payment via LNURL verify URL:', verifyUrl)
+        const lnurlStatus = await checkLNURLPaymentStatus(verifyUrl)
+        
+        if (lnurlStatus.paid) {
+          console.log('Payment verified via LNURL!')
+          return NextResponse.json({
+            paid: true,
+            documentId,
+            message: 'Payment verified. Access granted.',
+          })
+        }
+        
+        // Not paid yet - return waiting status
+        return NextResponse.json(
+          { 
+            paid: false, 
+            error: 'Waiting for payment',
+          },
+          { status: 402 }
+        )
+      }
+      
+      // Method 2: Verify via preimage (fallback for manual verification)
       if (preimage) {
         try {
+          console.log('Verifying preimage for creator payment...')
+          
           // Compute SHA256 of the preimage
           const computedHash = createHash('sha256')
             .update(Buffer.from(preimage, 'hex'))
@@ -73,36 +101,37 @@ export async function POST(request: NextRequest) {
           
           // Verify it matches the payment hash from the token
           if (computedHash !== verification.paymentHash) {
+            console.error('Preimage verification failed: hash mismatch')
             return NextResponse.json(
               { paid: false, error: 'Invalid preimage' },
               { status: 401 }
             )
           }
           
-          // Preimage verified cryptographically
+          console.log('Preimage verified successfully!')
           return NextResponse.json({
             paid: true,
             documentId,
             message: 'Payment verified. Access granted.',
           })
-        } catch {
+        } catch (e) {
+          console.error('Preimage verification error:', e)
           return NextResponse.json(
             { paid: false, error: 'Invalid preimage format' },
             { status: 400 }
           )
         }
-      } else {
-        // No preimage - this is polling before payment
-        // For creator payments, we can't check server-side, so return waiting status
-        return NextResponse.json(
-          { 
-            paid: false, 
-            error: 'Waiting for payment',
-            requiresPreimage: true
-          },
-          { status: 402 }
-        )
       }
+      
+      // No verify URL and no preimage - can't verify
+      return NextResponse.json(
+        { 
+          paid: false, 
+          error: 'Waiting for payment',
+          requiresPreimage: true
+        },
+        { status: 402 }
+      )
     } else {
       // Platform payment - check LND directly
       try {

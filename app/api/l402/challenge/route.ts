@@ -56,6 +56,8 @@ export async function POST(request: NextRequest) {
     let paymentRequest: string
     let paymentHash: string
 
+    let verifyUrl: string | undefined
+
     // Check if document has a creator's Lightning Address
     if (document.lightning_address) {
       // Create invoice via LNURL-pay - payment goes to creator
@@ -67,6 +69,7 @@ export async function POST(request: NextRequest) {
         )
         paymentRequest = result.paymentRequest
         paymentHash = result.paymentHash
+        verifyUrl = result.verifyUrl
       } catch (lnurlError) {
         console.error('LNURL-pay error:', lnurlError)
         return NextResponse.json(
@@ -113,6 +116,8 @@ export async function POST(request: NextRequest) {
         creatorName: document.creator_name,
         // Indicate if this is a creator payment
         paymentType: document.lightning_address ? 'creator' : 'platform',
+        // Include verify URL for polling (creator payments only)
+        verifyUrl: verifyUrl,
       },
       {
         status: 402,

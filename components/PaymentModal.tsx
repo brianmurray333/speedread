@@ -30,6 +30,7 @@ interface L402Challenge {
   priceSats: number
   creatorName?: string
   paymentType: 'creator' | 'platform'
+  verifyUrl?: string
 }
 
 export default function PaymentModal({
@@ -48,6 +49,9 @@ export default function PaymentModal({
   const [urlCopied, setUrlCopied] = useState(false)
   const [hasWebLN, setHasWebLN] = useState(false)
   const [webLNPaying, setWebLNPaying] = useState(false)
+  const [showPreimageInput, setShowPreimageInput] = useState(false)
+  const [preimageInput, setPreimageInput] = useState('')
+  const [verifyingPreimage, setVerifyingPreimage] = useState(false)
 
   // Check for WebLN support (Alby, etc.)
   useEffect(() => {
@@ -101,7 +105,7 @@ export default function PaymentModal({
     }
   }
 
-  // Poll for payment completion (only works for platform payments)
+  // Poll for payment completion
   const checkPayment = useCallback(async (preimage?: string) => {
     if (!challenge) return false
 
@@ -112,7 +116,8 @@ export default function PaymentModal({
         body: JSON.stringify({
           macaroon: challenge.macaroon,
           documentId,
-          preimage, // Include preimage for creator payments
+          preimage, // Include preimage for manual verification
+          verifyUrl: challenge.verifyUrl, // Include verify URL for LNURL polling
         }),
       })
 
@@ -123,10 +128,15 @@ export default function PaymentModal({
     }
   }, [challenge, documentId])
 
-  // Start polling when challenge is available (only for platform payments)
+  // Start polling when challenge is available
   useEffect(() => {
-    // Only poll for platform payments - creator payments need preimage from WebLN
-    if (!challenge || checking || challenge.paymentType === 'creator') return
+    // Poll for platform payments OR creator payments with verifyUrl
+    const canPoll = challenge && (
+      challenge.paymentType === 'platform' || 
+      (challenge.paymentType === 'creator' && challenge.verifyUrl)
+    )
+    
+    if (!canPoll || checking) return
 
     const pollInterval = setInterval(async () => {
       setChecking(true)
@@ -149,17 +159,29 @@ export default function PaymentModal({
     setError(null)
 
     try {
+      console.log('Enabling WebLN...')
       await window.webln.enable()
+      console.log('WebLN enabled, sending payment...')
       const result = await window.webln.sendPayment(challenge.paymentRequest)
+      console.log('Payment result:', result)
       
       // Payment successful via WebLN
       // For creator payments, verify with the preimage
-      if (challenge.paymentType === 'creator' && result.preimage) {
-        const paid = await checkPayment(result.preimage)
-        if (paid) {
-          onPaymentComplete(challenge.macaroon)
+      if (challenge.paymentType === 'creator') {
+        if (result.preimage) {
+          console.log('Verifying creator payment with preimage...')
+          const paid = await checkPayment(result.preimage)
+          if (paid) {
+            console.log('Payment verified!')
+            onPaymentComplete(challenge.macaroon)
+          } else {
+            console.error('Payment verification failed')
+            setError('Payment verification failed. Please try again.')
+          }
         } else {
-          setError('Payment verification failed. Please try again.')
+          // Some wallets don't return preimage - trust the successful payment
+          console.log('No preimage returned, trusting WebLN success')
+          onPaymentComplete(challenge.macaroon)
         }
       } else {
         // Platform payment - give a moment for the node to register
@@ -168,8 +190,9 @@ export default function PaymentModal({
       }
     } catch (e) {
       // User cancelled or payment failed - they can still pay via QR
-      console.log('WebLN payment cancelled or failed:', e)
-      setError('WebLN payment cancelled. You can still pay using the QR code.')
+      console.error('WebLN payment error:', e)
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error'
+      setError(`Payment failed: ${errorMessage}. You can still pay using the QR code.`)
     } finally {
       setWebLNPaying(false)
     }
@@ -180,6 +203,27 @@ export default function PaymentModal({
       navigator.clipboard.writeText(challenge.paymentRequest)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  const handlePreimageVerify = async () => {
+    if (!preimageInput.trim() || !challenge) return
+    
+    setVerifyingPreimage(true)
+    setError(null)
+    
+    try {
+      const paid = await checkPayment(preimageInput.trim())
+      if (paid) {
+        onPaymentComplete(challenge.macaroon)
+      } else {
+        setError('Preimage verification failed. Make sure you copied the full preimage.')
+      }
+    } catch (e) {
+      console.error('Preimage verification error:', e)
+      setError('Failed to verify preimage. Please try again.')
+    } finally {
+      setVerifyingPreimage(false)
     }
   }
 
@@ -347,6 +391,47 @@ export default function PaymentModal({
               )}
             </button>
 
+            {/* Already paid? Enter preimage (for creator payments without verifyUrl) */}
+            {challenge.paymentType === 'creator' && !challenge.verifyUrl && (
+              <div className="space-y-2">
+                {!showPreimageInput ? (
+                  <button
+                    onClick={() => setShowPreimageInput(true)}
+                    className="w-full py-2 text-[color:var(--muted)] text-sm hover:text-[color:var(--foreground)] transition-colors"
+                  >
+                    Already paid? Click here to verify →
+                  </button>
+                ) : (
+                  <div className="space-y-2 p-3 bg-[color:var(--surface-hover)] rounded-lg">
+                    <p className="text-xs text-[color:var(--muted)]">
+                      Paste your payment preimage to verify:
+                    </p>
+                    <input
+                      type="text"
+                      value={preimageInput}
+                      onChange={(e) => setPreimageInput(e.target.value)}
+                      placeholder="Paste preimage here..."
+                      className="w-full px-3 py-2 bg-[color:var(--background)] border border-[color:var(--border)] rounded-lg text-sm font-mono"
+                    />
+                    <button
+                      onClick={handlePreimageVerify}
+                      disabled={verifyingPreimage || !preimageInput.trim()}
+                      className="w-full py-2 bg-[#F7931A] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {verifyingPreimage ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Verifying...
+                        </>
+                      ) : (
+                        'Verify Payment'
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Status */}
             <div className="flex flex-col items-center gap-2 text-[color:var(--muted)] text-sm">
               <div className="flex items-center gap-2">
@@ -355,6 +440,11 @@ export default function PaymentModal({
                     <div className="w-4 h-4 border-2 border-[#F7931A] border-t-transparent rounded-full animate-spin" />
                     Checking payment...
                   </>
+                ) : verifyingPreimage ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-[#F7931A] border-t-transparent rounded-full animate-spin" />
+                    Verifying preimage...
+                  </>
                 ) : (
                   <>
                     <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
@@ -362,7 +452,7 @@ export default function PaymentModal({
                   </>
                 )}
               </div>
-              {challenge.paymentType === 'creator' && (
+              {challenge.paymentType === 'creator' && !showPreimageInput && (
                 <p className="text-xs text-center">
                   Payment goes directly to the creator
                 </p>
