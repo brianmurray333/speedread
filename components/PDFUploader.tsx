@@ -2,9 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { 
-  extractSmartContentFromPDF, 
+  extractContentFromPDFProgressive, 
   parseTextToContentItems, 
-  parseTextToWords,
   ContentItem 
 } from '@/lib/pdfParser'
 import { useToast } from './Toast'
@@ -12,7 +11,7 @@ import ClipboardPasteModal, { useClipboardPaste } from './ClipboardPasteModal'
 
 interface PDFUploaderProps {
   onTextExtracted: (words: string[], title: string, rawText?: string) => void
-  onContentExtracted?: (content: ContentItem[], title: string, rawText?: string) => void
+  onContentExtracted?: (content: ContentItem[], title: string, rawText?: string, done?: boolean) => void
 }
 
 export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDFUploaderProps) {
@@ -215,41 +214,51 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
     setExtractionProgress('Extracting text...')
 
     try {
-      // Use smart content extraction for PDFs
-      setExtractionProgress('Extracting text and images...')
-      const contentItems = await extractSmartContentFromPDF(file)
-      
-      const words = contentItems
-        .filter((item): item is { type: 'word'; value: string } => item.type === 'word')
-        .map(item => item.value)
-      
-      const imageCount = contentItems.filter(item => item.type === 'image').length
-
-      if (words.length === 0) {
-        showToast('Could not extract text from this PDF', 'error')
-        setIsLoading(false)
-        setExtractionProgress(null)
-        return
-      }
-
       const title = file.name.replace('.pdf', '')
-      const rawText = words.join(' ')
-      
-      // Show extraction summary
-      if (imageCount > 0) {
-        setExtractionProgress(`Found ${words.length} words and ${imageCount} image${imageCount > 1 ? 's' : ''}`)
-      }
+      let firstBatchSent = false
 
-      // Call both callbacks
-      onTextExtracted(words, title, rawText)
-      onContentExtracted?.(contentItems, title, rawText)
+      // Use progressive extraction - sends user to reader quickly
+      // then continues processing remaining pages in background
+      await extractContentFromPDFProgressive(
+        file,
+        (contentItems, rawText, done, pagesProcessed, totalPages) => {
+          const words = contentItems
+            .filter((item): item is { type: 'word'; value: string } => item.type === 'word')
+            .map(item => item.value)
+
+          if (!firstBatchSent) {
+            // First batch - validate and send user to reader
+            firstBatchSent = true
+
+            if (words.length === 0) {
+              showToast('Could not extract text from this PDF', 'error')
+              setIsLoading(false)
+              setExtractionProgress(null)
+              return
+            }
+
+            setIsLoading(false)
+            setExtractionProgress(null)
+
+            // Call callbacks to transition to the reader
+            onTextExtracted(words, title, rawText)
+            onContentExtracted?.(contentItems, title, rawText, done)
+          } else {
+            // Subsequent batches - update content as more pages are processed
+            onTextExtracted(words, title, rawText)
+            onContentExtracted?.(contentItems, title, rawText, done)
+          }
+
+          if (!done) {
+            setExtractionProgress(`Processing page ${pagesProcessed} of ${totalPages}...`)
+          }
+        }
+      )
     } catch (e) {
       console.error('PDF parsing error:', e)
       showToast('Error reading PDF. Please try another file', 'error')
-    } finally {
       setIsLoading(false)
-      // Keep progress message briefly visible
-      setTimeout(() => setExtractionProgress(null), 2000)
+      setExtractionProgress(null)
     }
   }
 

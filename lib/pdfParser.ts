@@ -479,3 +479,226 @@ export async function extractSmartContentFromPDF(file: File): Promise<ContentIte
   
   return allContent
 }
+
+// Lightweight image extraction - only grabs images that already have a .src (e.g. embedded JPEGs)
+// Skips raw pixel data images entirely (no canvas/encoding overhead)
+async function extractFreeImagesFromPage(
+  page: { getOperatorList: () => Promise<{ fnArray: number[]; argsArray: unknown[][] }>; objs: { get: (name: string, callback: (img: unknown) => void) => void } },
+  pageNum: number
+): Promise<ExtractedImage[]> {
+  const images: ExtractedImage[] = []
+
+  try {
+    const operatorList = await page.getOperatorList()
+    const pdfjsLib = await import('pdfjs-dist')
+    const { OPS } = pdfjsLib
+
+    const seenImages = new Set<string>()
+    // Collect transform state to get Y positions
+    let lastTransform: number[] | null = null
+
+    for (let i = 0; i < operatorList.fnArray.length; i++) {
+      const fnId = operatorList.fnArray[i]
+      const args = operatorList.argsArray[i]
+
+      // Track transform for position info
+      if (fnId === OPS.transform) {
+        lastTransform = args as unknown as number[]
+      }
+
+      if (fnId === OPS.paintImageXObject) {
+        const imageName = args[0] as string
+        if (seenImages.has(imageName)) continue
+        seenImages.add(imageName)
+
+        try {
+          const imgData = await new Promise<{
+            width: number
+            height: number
+            src?: string
+          } | null>((resolve) => {
+            page.objs.get(imageName, (img: unknown) => {
+              resolve(img as { width: number; height: number; src?: string } | null)
+            })
+          })
+
+          if (!imgData) continue
+          // Only use images that already have a src (no conversion needed)
+          if (!imgData.src) continue
+          // Skip tiny images (icons, artifacts)
+          if (imgData.width < 50 || imgData.height < 50) continue
+          // Skip extreme aspect ratios (decorative lines)
+          const aspectRatio = imgData.width / imgData.height
+          if (aspectRatio > 10 || aspectRatio < 0.1) continue
+
+          // Use transform Y position if available (higher Y = higher on page in PDF coords)
+          const yPosition = lastTransform ? lastTransform[5] : 0
+
+          images.push({
+            src: imgData.src,
+            width: imgData.width,
+            height: imgData.height,
+            pageNum,
+            yPosition
+          })
+        } catch {
+          // Skip images that fail
+        }
+      }
+    }
+  } catch {
+    // Skip pages where operator list fails
+  }
+
+  return images
+}
+
+// Build content items for a page, interleaving text and images by Y position
+function buildPageContent(
+  textItems: TextItemWithPosition[],
+  images: ExtractedImage[],
+  pageNum: number
+): ContentItem[] {
+  if (images.length === 0) {
+    // No images - just return text
+    const pageText = textItems.map(item => item.str).join(' ')
+    return parseTextToContentItems(pageText)
+  }
+
+  // Group text items into lines by Y position (rounded to cluster nearby items)
+  // PDF Y coordinates go bottom-to-top, so we sort descending for top-to-bottom reading order
+  const textByY: { y: number; text: string }[] = []
+  let currentY = -Infinity
+  let currentLine = ''
+  const Y_THRESHOLD = 5 // items within 5 units are on the same line
+
+  // Sort text items top-to-bottom (descending Y in PDF coords)
+  const sortedText = [...textItems].sort((a, b) => b.transform[5] - a.transform[5])
+
+  for (const item of sortedText) {
+    const y = item.transform[5]
+    if (Math.abs(y - currentY) > Y_THRESHOLD && currentLine.trim()) {
+      textByY.push({ y: currentY, text: currentLine })
+      currentLine = ''
+    }
+    currentY = y
+    currentLine += item.str + ' '
+  }
+  if (currentLine.trim()) {
+    textByY.push({ y: currentY, text: currentLine })
+  }
+
+  // Sort images top-to-bottom (descending Y)
+  const sortedImages = [...images].sort((a, b) => b.yPosition - a.yPosition)
+
+  // Merge text and images in reading order (top to bottom)
+  const content: ContentItem[] = []
+  let imgIdx = 0
+
+  for (const line of textByY) {
+    // Insert any images that appear above this text line (higher Y = above in PDF)
+    while (imgIdx < sortedImages.length && sortedImages[imgIdx].yPosition >= line.y) {
+      const img = sortedImages[imgIdx]
+      content.push({
+        type: 'image',
+        src: img.src,
+        pageNum: img.pageNum,
+        width: img.width,
+        height: img.height,
+        alt: `Figure from page ${img.pageNum}`
+      })
+      imgIdx++
+    }
+    // Add text words
+    const words = parseTextToContentItems(line.text)
+    content.push(...words)
+  }
+
+  // Any remaining images after all text
+  while (imgIdx < sortedImages.length) {
+    const img = sortedImages[imgIdx]
+    content.push({
+      type: 'image',
+      src: img.src,
+      pageNum: img.pageNum,
+      width: img.width,
+      height: img.height,
+      alt: `Figure from page ${img.pageNum}`
+    })
+    imgIdx++
+  }
+
+  return content
+}
+
+// Progressive PDF extraction - extracts text and free images (no expensive conversion)
+// Calls onBatchReady as content becomes available so the user can start reading immediately
+export async function extractContentFromPDFProgressive(
+  file: File,
+  onBatchReady: (content: ContentItem[], text: string, done: boolean, pagesProcessed: number, totalPages: number) => void,
+): Promise<void> {
+  const pdfjsLib = await import('pdfjs-dist')
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+
+  const arrayBuffer = await file.arrayBuffer()
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+  
+  const totalPages = pdf.numPages
+  // Send first batch after a few pages so user can start reading quickly
+  const FIRST_BATCH_SIZE = Math.min(3, totalPages)
+  // After first batch, send updates every N pages
+  const UPDATE_INTERVAL = 5
+  
+  let fullText = ''
+  let allContent: ContentItem[] = []
+  let firstBatchSent = false
+  
+  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    const page = await pdf.getPage(pageNum)
+    
+    // Extract text
+    const textContent = await page.getTextContent()
+    const textItems: TextItemWithPosition[] = []
+    
+    for (const item of textContent.items) {
+      if (isTextItem(item) && item.transform) {
+        textItems.push({
+          str: item.str,
+          transform: item.transform,
+          width: item.width || 0,
+          height: item.height || 0
+        })
+      }
+    }
+    
+    const filteredItems = filterTextItemsByPosition(textItems)
+    const pageText = filteredItems.map(item => item.str).join(' ')
+    fullText += pageText + ' '
+
+    // Extract free images (only .src, no conversion) 
+    const freeImages = await extractFreeImagesFromPage(page, pageNum)
+
+    // Build interleaved content for this page
+    const pageContent = buildPageContent(filteredItems, freeImages, pageNum)
+    allContent = allContent.concat(pageContent)
+    
+    // Send first batch early so user can start reading
+    if (!firstBatchSent && pageNum >= FIRST_BATCH_SIZE) {
+      firstBatchSent = true
+      onBatchReady([...allContent], fullText.trim(), totalPages <= FIRST_BATCH_SIZE, pageNum, totalPages)
+    }
+    // Send periodic updates for remaining pages
+    else if (firstBatchSent && (pageNum % UPDATE_INTERVAL === 0)) {
+      onBatchReady([...allContent], fullText.trim(), false, pageNum, totalPages)
+    }
+  }
+  
+  // If PDF had fewer pages than FIRST_BATCH_SIZE, send the first (and final) batch now
+  if (!firstBatchSent) {
+    onBatchReady([...allContent], fullText.trim(), true, totalPages, totalPages)
+    return
+  }
+  
+  // Send final complete batch
+  onBatchReady([...allContent], fullText.trim(), true, totalPages, totalPages)
+}

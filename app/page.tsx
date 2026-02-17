@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Header from '@/components/Header'
 import PDFUploader from '@/components/PDFUploader'
@@ -24,6 +24,9 @@ function HomeContent() {
   const [showUploadOptions, setShowUploadOptions] = useState(false)
   const [showPublishModal, setShowPublishModal] = useState(false)
   const [urlTextProcessed, setUrlTextProcessed] = useState(false)
+  const [isStillProcessing, setIsStillProcessing] = useState(false)
+  // Session counter to ignore stale callbacks from previous uploads
+  const extractionSessionRef = useRef(0)
 
   // Generate a title from the first few words of text
   const generateTitleFromText = (text: string): string => {
@@ -165,10 +168,18 @@ function HomeContent() {
     setWords(extractedWords)
     setTitle(docTitle)
     setTextContent(rawText || extractedWords.join(' '))
-    setShowUploadOptions(true)
+    if (!showUploadOptions && !isReading) {
+      // New extraction session - increment counter
+      extractionSessionRef.current += 1
+      setShowUploadOptions(true)
+      setIsStillProcessing(true)
+    }
   }
 
-  const handleContentExtracted = (extractedContent: ContentItem[], docTitle: string, rawText?: string) => {
+  const handleContentExtracted = (extractedContent: ContentItem[], docTitle: string, rawText?: string, done?: boolean) => {
+    // Capture session at time of first call
+    const session = extractionSessionRef.current
+    
     setContent(extractedContent)
     // Also update words for backward compatibility
     const extractedWords = extractedContent
@@ -177,7 +188,16 @@ function HomeContent() {
     setWords(extractedWords)
     setTitle(docTitle)
     setTextContent(rawText || extractedWords.join(' '))
-    setShowUploadOptions(true)
+    if (!showUploadOptions && !isReading) {
+      extractionSessionRef.current += 1
+      setShowUploadOptions(true)
+      setIsStillProcessing(true)
+    }
+    // If this is the final batch (or a non-progressive call), mark processing as complete
+    // Only if we're still in the same session
+    if (done !== false && session === extractionSessionRef.current) {
+      setIsStillProcessing(false)
+    }
   }
 
   const handleStartReading = () => {
@@ -218,12 +238,14 @@ function HomeContent() {
           autoStart={true}
           onComplete={() => {}}
           onRequestPublish={() => setShowPublishModal(true)}
+          isLoadingMore={isStillProcessing}
           onExit={() => {
             setIsReading(false)
             setWords([])
             setContent([])
             setTitle('')
             setTextContent('')
+            setIsStillProcessing(false)
           }}
         />
         {/* Publish Modal overlay for sharing local content */}
@@ -261,7 +283,13 @@ function HomeContent() {
             <h1 className="text-2xl font-bold mb-2">{title}</h1>
             <p className="text-[color:var(--muted)]">
               {words.length.toLocaleString()} words ready
-              {imageCount > 0 && (
+              {isStillProcessing && (
+                <span className="block text-sm mt-1 flex items-center justify-center gap-2">
+                  <span className="w-3 h-3 border-2 border-[color:var(--accent)] border-t-transparent rounded-full animate-spin inline-block" />
+                  Loading more pages...
+                </span>
+              )}
+              {!isStillProcessing && imageCount > 0 && (
                 <span className="block text-sm mt-1">
                   + {imageCount} image{imageCount > 1 ? 's' : ''} extracted
                 </span>
@@ -296,11 +324,13 @@ function HomeContent() {
             {/* Cancel */}
             <button
               onClick={() => {
+                extractionSessionRef.current += 1  // Invalidate any in-progress extraction
                 setShowUploadOptions(false)
                 setWords([])
                 setContent([])
                 setTitle('')
                 setTextContent('')
+                setIsStillProcessing(false)
               }}
               className="w-full py-3 text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors text-sm"
             >

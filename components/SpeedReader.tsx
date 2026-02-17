@@ -15,6 +15,7 @@ interface SpeedReaderProps {
   onRequestPublish?: () => void  // Called when user wants to share unsaved content
   onComplete?: () => void
   onExit?: () => void
+  isLoadingMore?: boolean  // True when more content is being loaded progressively
 }
 
 export default function SpeedReader({ 
@@ -25,7 +26,8 @@ export default function SpeedReader({
   documentId,
   onRequestPublish,
   onComplete,
-  onExit 
+  onExit,
+  isLoadingMore = false
 }: SpeedReaderProps) {
   // Convert legacy words array to content items if needed
   const contentItems: ContentItem[] = content || (words?.map(w => ({ type: 'word' as const, value: w })) || [])
@@ -582,7 +584,13 @@ export default function SpeedReader({
         {/* Word count */}
         <p className="text-center text-[color:var(--muted)] text-xs mt-2">
           Word {wordsRead} of {wordCount}
-          {contentItems.some(item => item.type === 'image') && (
+          {isLoadingMore && (
+            <span className="ml-2 inline-flex items-center gap-1">
+              • <span className="w-2 h-2 border border-[color:var(--accent)] border-t-transparent rounded-full animate-spin inline-block" />
+              Loading more...
+            </span>
+          )}
+          {!isLoadingMore && contentItems.some(item => item.type === 'image') && (
             <span className="ml-2">• Includes images</span>
           )}
         </p>
