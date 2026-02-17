@@ -77,14 +77,22 @@ function HomeContent() {
       return
     }
     
-    // Check for ?paste=true parameter (read from clipboard)
+    // Check for ?paste=true parameter (read from clipboard or sessionStorage)
     const shouldPaste = searchParams.get('paste')
     if (shouldPaste === 'true') {
       setUrlTextProcessed(true)
       
-      // Read from clipboard with improved permission handling
-      if (typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
-        const attemptClipboardRead = async () => {
+      const attemptRead = async () => {
+        // First, check sessionStorage for pending pasted text (from fallback modal)
+        const pendingText = sessionStorage.getItem('pendingPastedText')
+        if (pendingText && pendingText.trim().length > 0) {
+          sessionStorage.removeItem('pendingPastedText')
+          processAndStartReading(pendingText)
+          return
+        }
+        
+        // Fall back to clipboard API if no pending text
+        if (typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
           try {
             // Check if Permissions API is available
             if ('permissions' in navigator && 'query' in navigator.permissions) {
@@ -126,10 +134,15 @@ function HomeContent() {
             setShowIntro(false)
             window.history.replaceState({}, '', '/')
           }
+        } else {
+          // No clipboard API, show home page
+          localStorage.setItem('speedread-intro-seen', 'true')
+          setShowIntro(false)
+          window.history.replaceState({}, '', '/')
         }
-        
-        attemptClipboardRead()
       }
+      
+      attemptRead()
       return
     }
   }, [searchParams, urlTextProcessed])
