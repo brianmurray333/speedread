@@ -10,7 +10,7 @@ import PublishModal from '@/components/PublishModal'
 import MobileBottomNav from '@/components/MobileBottomNav'
 import BitcoinInfoSection from '@/components/BitcoinInfoSection'
 import Link from 'next/link'
-import { ContentItem, parseTextToContentItems } from '@/lib/pdfParser'
+import { ContentItem, DocumentAnalysis, parseTextToContentItems } from '@/lib/pdfParser'
 
 // Separate component that uses useSearchParams (needs Suspense boundary)
 function HomeContent() {
@@ -25,6 +25,7 @@ function HomeContent() {
   const [showPublishModal, setShowPublishModal] = useState(false)
   const [urlTextProcessed, setUrlTextProcessed] = useState(false)
   const [isStillProcessing, setIsStillProcessing] = useState(false)
+  const [documentAnalysis, setDocumentAnalysis] = useState<DocumentAnalysis | null>(null)
   // Session counter to ignore stale callbacks from previous uploads
   const extractionSessionRef = useRef(0)
 
@@ -246,6 +247,7 @@ function HomeContent() {
             setTitle('')
             setTextContent('')
             setIsStillProcessing(false)
+            setDocumentAnalysis(null)
           }}
         />
         {/* Publish Modal overlay for sharing local content */}
@@ -295,6 +297,36 @@ function HomeContent() {
                 </span>
               )}
             </p>
+
+            {/* AI-detected sections */}
+            {documentAnalysis && documentAnalysis.sections.length > 0 && (
+              <div className="mt-4 text-left bg-[color:var(--surface)] rounded-lg border border-[color:var(--border)] p-3">
+                <p className="text-xs font-semibold text-[color:var(--muted)] uppercase tracking-wider mb-2">
+                  Reading Order
+                </p>
+                <ol className="space-y-1">
+                  {documentAnalysis.sections
+                    .filter(s => !s.skip)
+                    .sort((a, b) => a.priority - b.priority)
+                    .map((section, i) => (
+                      <li key={i} className="flex items-center gap-2 text-sm">
+                        <span className="w-5 h-5 rounded-full bg-[color:var(--accent)] text-white text-xs flex items-center justify-center flex-shrink-0">
+                          {i + 1}
+                        </span>
+                        <span className="text-[color:var(--foreground)]">{section.name}</span>
+                        <span className="text-[color:var(--muted)] text-xs ml-auto">
+                          p.{section.startPage}{section.endPage !== section.startPage ? `–${section.endPage}` : ''}
+                        </span>
+                      </li>
+                    ))}
+                </ol>
+                {documentAnalysis.sections.filter(s => s.skip).length > 0 && (
+                  <p className="text-xs text-[color:var(--muted)] mt-2 pt-2 border-t border-[color:var(--border)]">
+                    Skipping: {documentAnalysis.sections.filter(s => s.skip).map(s => s.name).join(', ')}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="space-y-3">
@@ -331,6 +363,7 @@ function HomeContent() {
                 setTitle('')
                 setTextContent('')
                 setIsStillProcessing(false)
+                setDocumentAnalysis(null)
               }}
               className="w-full py-3 text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors text-sm"
             >
@@ -370,6 +403,7 @@ function HomeContent() {
           <PDFUploader 
             onTextExtracted={handleTextExtracted}
             onContentExtracted={handleContentExtracted}
+            onAnalysisComplete={(analysis) => setDocumentAnalysis(analysis)}
           />
           
           <p className="mt-8 text-center text-[color:var(--muted)]">

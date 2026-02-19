@@ -2,9 +2,11 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { 
-  extractContentFromPDFProgressive, 
+  extractTextByPage,
+  buildContentFromSections, 
   parseTextToContentItems, 
-  ContentItem 
+  ContentItem,
+  DocumentAnalysis 
 } from '@/lib/pdfParser'
 import { useToast } from './Toast'
 import ClipboardPasteModal, { useClipboardPaste } from './ClipboardPasteModal'
@@ -12,9 +14,10 @@ import ClipboardPasteModal, { useClipboardPaste } from './ClipboardPasteModal'
 interface PDFUploaderProps {
   onTextExtracted: (words: string[], title: string, rawText?: string) => void
   onContentExtracted?: (content: ContentItem[], title: string, rawText?: string, done?: boolean) => void
+  onAnalysisComplete?: (analysis: DocumentAnalysis) => void
 }
 
-export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDFUploaderProps) {
+export default function PDFUploader({ onTextExtracted, onContentExtracted, onAnalysisComplete }: PDFUploaderProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [dragActive, setDragActive] = useState(false)
   const [extractionProgress, setExtractionProgress] = useState<string | null>(null)
@@ -215,46 +218,72 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
     console.log('[PDFUploader] handleFile called for:', file.name, file.size, file.type)
 
     try {
-      const title = file.name.replace('.pdf', '')
-      let firstBatchSent = false
+      const fallbackTitle = file.name.replace('.pdf', '')
 
-      // Use progressive extraction - sends user to reader quickly
-      // then continues processing remaining pages in background
-      await extractContentFromPDFProgressive(
-        file,
-        (contentItems, rawText, done, pagesProcessed, totalPages) => {
-          const words = contentItems
-            .filter((item): item is { type: 'word'; value: string } => item.type === 'word')
-            .map(item => item.value)
+      // Step 1: Fast text-only extraction (all pages)
+      const { pageTexts, totalPages } = await extractTextByPage(file)
+      const allText = Object.values(pageTexts).join(' ')
+      
+      if (allText.trim().length === 0) {
+        showToast('Could not extract text from this PDF', 'error')
+        setIsLoading(false)
+        setExtractionProgress(null)
+        return
+      }
 
-          if (!firstBatchSent) {
-            // First batch - validate and send user to reader
-            firstBatchSent = true
+      console.log(`[PDFUploader] Extracted text from ${totalPages} pages, analyzing with AI...`)
+      setExtractionProgress('Analyzing document structure...')
 
-            if (words.length === 0) {
-              showToast('Could not extract text from this PDF', 'error')
-              setIsLoading(false)
-              setExtractionProgress(null)
-              return
-            }
+      // Step 2: Call AI to analyze document structure
+      let analysis: DocumentAnalysis | null = null
+      try {
+        const analyzeResponse = await fetch('/api/pdf/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pageTexts })
+        })
 
-            setIsLoading(false)
-            setExtractionProgress(null)
-
-            // Call callbacks to transition to the reader
-            onTextExtracted(words, title, rawText)
-            onContentExtracted?.(contentItems, title, rawText, done)
-          } else {
-            // Subsequent batches - update content as more pages are processed
-            onTextExtracted(words, title, rawText)
-            onContentExtracted?.(contentItems, title, rawText, done)
-          }
-
-          if (!done) {
-            setExtractionProgress(`Processing page ${pagesProcessed} of ${totalPages}...`)
-          }
+        if (analyzeResponse.ok) {
+          analysis = await analyzeResponse.json()
+          console.log('[PDFUploader] AI analysis:', analysis)
+        } else {
+          console.warn('[PDFUploader] AI analysis failed, using page order')
         }
-      )
+      } catch (e) {
+        console.warn('[PDFUploader] AI analysis error, using page order:', e)
+      }
+
+      // Step 3: Build content — either AI-guided or fallback to page order
+      let contentItems: ContentItem[]
+      let title: string
+
+      if (analysis && analysis.sections && analysis.sections.length > 0) {
+        contentItems = buildContentFromSections(pageTexts, analysis)
+        title = analysis.title || fallbackTitle
+        onAnalysisComplete?.(analysis)
+      } else {
+        // Fallback: page order, plain text
+        contentItems = parseTextToContentItems(allText)
+        title = fallbackTitle
+      }
+
+      const words = contentItems
+        .filter((item): item is { type: 'word'; value: string } => item.type === 'word')
+        .map(item => item.value)
+
+      if (words.length === 0) {
+        showToast('Could not extract readable text from this PDF', 'error')
+        setIsLoading(false)
+        setExtractionProgress(null)
+        return
+      }
+
+      setIsLoading(false)
+      setExtractionProgress(null)
+
+      // Send to parent
+      onTextExtracted(words, title, allText)
+      onContentExtracted?.(contentItems, title, allText, true)
     } catch (e) {
       console.error('PDF parsing error:', e)
       showToast('Error reading PDF. Please try another file', 'error')

@@ -1,7 +1,23 @@
-// Content types for mixed word/image flow
+// Content types for mixed word/image/section flow
 export type ContentItem = 
   | { type: 'word'; value: string }
   | { type: 'image'; src: string; alt?: string; pageNum: number; width?: number; height?: number }
+  | { type: 'section'; title: string }
+
+// Section definition from AI analysis
+export interface DocumentSection {
+  name: string
+  startPage: number
+  endPage: number
+  priority: number
+  skip: boolean
+}
+
+// AI analysis result
+export interface DocumentAnalysis {
+  title: string
+  sections: DocumentSection[]
+}
 
 // Legacy function for backward compatibility
 export function parseTextToWords(text: string): string[] {
@@ -740,4 +756,85 @@ export async function extractContentFromPDFProgressive(
   // Send final complete batch
   console.log(`[PDF] Complete in ${totalTime}s - sending final batch (${allContent.length} items)`)
   onBatchReady([...allContent], fullText.trim(), true, totalPages, totalPages)
+}
+
+// ============================================================================
+// AI-guided extraction: extract text by page, then let AI guide section ordering
+// ============================================================================
+
+// Fast text-only extraction — returns text grouped by page number
+// No images, no progressive callbacks — just gets all text as fast as possible
+export async function extractTextByPage(
+  file: File
+): Promise<{ pageTexts: Record<number, string>; totalPages: number }> {
+  console.log(`[PDF] Fast text extraction for "${file.name}"`)
+  const startTime = performance.now()
+
+  const pdfjsLib = await import('pdfjs-dist')
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+
+  const arrayBuffer = await file.arrayBuffer()
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+
+  const totalPages = pdf.numPages
+  const pageTexts: Record<number, string> = {}
+
+  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    const page = await pdf.getPage(pageNum)
+    const textContent = await page.getTextContent()
+    const textItems: TextItemWithPosition[] = []
+
+    for (const item of textContent.items) {
+      if (isTextItem(item) && item.transform) {
+        textItems.push({
+          str: item.str,
+          transform: item.transform,
+          width: item.width || 0,
+          height: item.height || 0
+        })
+      }
+    }
+
+    const filteredItems = filterTextItemsByPosition(textItems)
+    const pageText = filteredItems.map(item => item.str).join(' ').trim()
+    if (pageText) {
+      pageTexts[pageNum] = pageText
+    }
+  }
+
+  const totalTime = ((performance.now() - startTime) / 1000).toFixed(1)
+  console.log(`[PDF] Text extraction complete in ${totalTime}s — ${totalPages} pages`)
+
+  return { pageTexts, totalPages }
+}
+
+// Build content items from page texts, ordered by AI-detected sections
+// Sections are read in priority order (lowest priority number first)
+// Skipped sections are excluded entirely
+export function buildContentFromSections(
+  pageTexts: Record<number, string>,
+  analysis: DocumentAnalysis
+): ContentItem[] {
+  const content: ContentItem[] = []
+
+  // Filter out skipped sections, sort by priority
+  const activeSections = analysis.sections
+    .filter(s => !s.skip)
+    .sort((a, b) => a.priority - b.priority)
+
+  for (const section of activeSections) {
+    // Add section divider
+    content.push({ type: 'section', title: section.name })
+
+    // Add text from this section's pages
+    for (let page = section.startPage; page <= section.endPage; page++) {
+      const pageText = pageTexts[page]
+      if (pageText) {
+        const items = parseTextToContentItems(pageText)
+        content.push(...items)
+      }
+    }
+  }
+
+  return content
 }

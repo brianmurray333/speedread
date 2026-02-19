@@ -48,8 +48,9 @@ export default function SpeedReader({
 
   const currentItem = contentItems[currentIndex]
   const isCurrentImage = currentItem?.type === 'image'
+  const isCurrentSection = currentItem?.type === 'section'
   
-  // Calculate progress based on word count (images don't count toward reading progress the same way)
+  // Calculate progress based on word count (images/sections don't count toward reading progress the same way)
   const wordCount = contentItems.filter(item => item.type === 'word').length
   const wordsRead = contentItems.slice(0, currentIndex + 1).filter(item => item.type === 'word').length
   const progress = wordCount > 0 ? (wordsRead / wordCount) * 100 : 0
@@ -160,7 +161,7 @@ export default function SpeedReader({
     return () => clearTimeout(timer)
   }, [countdown])
 
-  // Auto-advance words (but pause on images)
+  // Auto-advance words (but pause on images, auto-advance sections)
   useEffect(() => {
     if (!isPlaying || waitingForImageClick) return
 
@@ -170,6 +171,21 @@ export default function SpeedReader({
       setWaitingForImageClick(true)
       setShowControls(true)
       return
+    }
+
+    // Check if current item is a section title — show briefly then auto-advance
+    if (isCurrentSection) {
+      const sectionTimer = setTimeout(() => {
+        setCurrentIndex(prev => {
+          if (prev >= contentItems.length - 1) {
+            setIsPlaying(false)
+            onComplete?.()
+            return prev
+          }
+          return prev + 1
+        })
+      }, 2000) // Show section title for 2 seconds
+      return () => clearTimeout(sectionTimer)
     }
 
     const timer = setInterval(() => {
@@ -188,7 +204,7 @@ export default function SpeedReader({
     }, interval)
 
     return () => clearInterval(timer)
-  }, [isPlaying, interval, contentItems, isCurrentImage, onComplete, waitingForImageClick])
+  }, [isPlaying, interval, contentItems, isCurrentImage, isCurrentSection, onComplete, waitingForImageClick])
 
   // Hide controls after inactivity during playback
   const resetControlsTimeout = useCallback(() => {
@@ -438,7 +454,7 @@ export default function SpeedReader({
       )}
 
       {/* Time remaining - top center, subtle text, shows/hides with controls */}
-      {countdown === null && wordsRemaining > 0 && !isCurrentImage && (
+      {countdown === null && wordsRemaining > 0 && !isCurrentImage && !isCurrentSection && (
         <div className={`absolute top-6 left-0 right-0 flex justify-center pointer-events-none transition-opacity duration-300 ${
           showControls ? 'opacity-100' : 'opacity-0'
         }`}>
@@ -446,9 +462,17 @@ export default function SpeedReader({
         </div>
       )}
 
-      {/* Content Display - Word or Image */}
+      {/* Content Display - Word, Image, or Section Title */}
       <div className="flex-1 flex items-center justify-center w-full">
-        {isCurrentImage ? (
+        {isCurrentSection ? (
+          <div className="flex flex-col items-center gap-4 px-6 animate-fade-in">
+            <div className="w-12 h-1 bg-[color:var(--accent)] rounded-full" />
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center text-[color:var(--foreground)]">
+              {currentItem.type === 'section' ? currentItem.title : ''}
+            </h2>
+            <div className="w-12 h-1 bg-[color:var(--accent)] rounded-full" />
+          </div>
+        ) : isCurrentImage ? (
           renderImage()
         ) : (
           <div 
@@ -460,10 +484,10 @@ export default function SpeedReader({
         )}
       </div>
 
-      {/* Controls - fade in/out based on interaction (hidden when viewing images) */}
+      {/* Controls - fade in/out based on interaction (hidden when viewing images or sections) */}
       <div 
         className={`absolute bottom-0 left-0 right-0 p-6 transition-opacity duration-300 ${
-          showControls && !isCurrentImage ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          showControls && !isCurrentImage && !isCurrentSection ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
         {/* Progress bar - clickable to seek */}
