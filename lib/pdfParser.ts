@@ -480,6 +480,9 @@ export async function extractSmartContentFromPDF(file: File): Promise<ContentIte
   return allContent
 }
 
+// Cache of image names that are known to have no .src or timed out — skip them on subsequent pages
+const knownBadImages = new Set<string>()
+
 // Lightweight image extraction - only grabs images that already have a .src (e.g. embedded JPEGs)
 // Skips raw pixel data images entirely (no canvas/encoding overhead)
 async function extractFreeImagesFromPage(
@@ -489,14 +492,12 @@ async function extractFreeImagesFromPage(
   const images: ExtractedImage[] = []
 
   try {
-    console.log(`[PDF] Page ${pageNum}: getting operator list...`)
     const operatorList = await page.getOperatorList()
     const pdfjsLib = await import('pdfjs-dist')
     const { OPS } = pdfjsLib
 
     const seenImages = new Set<string>()
     let lastTransform: number[] | null = null
-    let imageOpsCount = 0
 
     for (let i = 0; i < operatorList.fnArray.length; i++) {
       const fnId = operatorList.fnArray[i]
@@ -508,13 +509,15 @@ async function extractFreeImagesFromPage(
       }
 
       if (fnId === OPS.paintImageXObject) {
-        imageOpsCount++
         const imageName = args[0] as string
         if (seenImages.has(imageName)) continue
         seenImages.add(imageName)
 
+        // Skip images we already know are bad (no .src or timed out before)
+        if (knownBadImages.has(imageName)) continue
+
         try {
-          // Use a timeout to prevent hanging on objs.get() - it can wait forever
+          // Use a short timeout (200ms) — images with .src resolve almost instantly
           const imgData = await Promise.race([
             new Promise<{
               width: number
@@ -526,15 +529,17 @@ async function extractFreeImagesFromPage(
               })
             }),
             new Promise<null>((resolve) => setTimeout(() => {
-              console.warn(`[PDF] Page ${pageNum}: timeout getting image "${imageName}", skipping`)
               resolve(null)
-            }, 2000))
+            }, 200))
           ])
 
-          if (!imgData) continue
+          if (!imgData) {
+            knownBadImages.add(imageName)
+            continue
+          }
           // Only use images that already have a src (no conversion needed)
           if (!imgData.src) {
-            console.log(`[PDF] Page ${pageNum}: image "${imageName}" has no .src (raw data), skipping`)
+            knownBadImages.add(imageName)
             continue
           }
           // Skip tiny images (icons, artifacts)
@@ -553,12 +558,14 @@ async function extractFreeImagesFromPage(
             pageNum,
             yPosition
           })
-        } catch (e) {
-          console.warn(`[PDF] Page ${pageNum}: error getting image "${imageName}":`, e)
+        } catch {
+          knownBadImages.add(imageName)
         }
       }
     }
-    console.log(`[PDF] Page ${pageNum}: ${imageOpsCount} image ops, ${images.length} free images extracted`)
+    if (images.length > 0) {
+      console.log(`[PDF] Page ${pageNum}: ${images.length} free images extracted`)
+    }
   } catch (e) {
     console.warn(`[PDF] Page ${pageNum}: failed to get operator list:`, e)
   }
@@ -570,7 +577,6 @@ async function extractFreeImagesFromPage(
 function buildPageContent(
   textItems: TextItemWithPosition[],
   images: ExtractedImage[],
-  pageNum: number
 ): ContentItem[] {
   if (images.length === 0) {
     // No images - just return text
@@ -653,9 +659,11 @@ export async function extractContentFromPDFProgressive(
   console.log(`[PDF] Starting progressive extraction for "${file.name}" (${(file.size / 1024 / 1024).toFixed(2)} MB)`)
   const startTime = performance.now()
   
+  // Reset image cache for new extraction
+  knownBadImages.clear()
+  
   const pdfjsLib = await import('pdfjs-dist')
   pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-  console.log('[PDF] pdf.js loaded, parsing document...')
 
   const arrayBuffer = await file.arrayBuffer()
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
@@ -677,7 +685,6 @@ export async function extractContentFromPDFProgressive(
     const page = await pdf.getPage(pageNum)
     
     // Extract text
-    console.log(`[PDF] Page ${pageNum}/${totalPages}: extracting text...`)
     const textContent = await page.getTextContent()
     const textItems: TextItemWithPosition[] = []
     
@@ -695,17 +702,18 @@ export async function extractContentFromPDFProgressive(
     const filteredItems = filterTextItemsByPosition(textItems)
     const pageText = filteredItems.map(item => item.str).join(' ')
     fullText += pageText + ' '
-    console.log(`[PDF] Page ${pageNum}: text done (${filteredItems.length} items), extracting images...`)
 
     // Extract free images (only .src, no conversion) 
     const freeImages = await extractFreeImagesFromPage(page, pageNum)
 
     // Build interleaved content for this page
-    const pageContent = buildPageContent(filteredItems, freeImages, pageNum)
+    const pageContent = buildPageContent(filteredItems, freeImages)
     allContent = allContent.concat(pageContent)
     
     const pageTime = (performance.now() - pageStart).toFixed(0)
-    console.log(`[PDF] Page ${pageNum}: complete in ${pageTime}ms (${freeImages.length} images)`)
+    if (freeImages.length > 0 || pageNum <= 3 || pageNum === totalPages) {
+      console.log(`[PDF] Page ${pageNum}/${totalPages}: ${filteredItems.length} text items, ${freeImages.length} images (${pageTime}ms)`)
+    }
     
     // Send first batch early so user can start reading
     if (!firstBatchSent && pageNum >= FIRST_BATCH_SIZE) {
