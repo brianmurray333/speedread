@@ -489,13 +489,14 @@ async function extractFreeImagesFromPage(
   const images: ExtractedImage[] = []
 
   try {
+    console.log(`[PDF] Page ${pageNum}: getting operator list...`)
     const operatorList = await page.getOperatorList()
     const pdfjsLib = await import('pdfjs-dist')
     const { OPS } = pdfjsLib
 
     const seenImages = new Set<string>()
-    // Collect transform state to get Y positions
     let lastTransform: number[] | null = null
+    let imageOpsCount = 0
 
     for (let i = 0; i < operatorList.fnArray.length; i++) {
       const fnId = operatorList.fnArray[i]
@@ -507,32 +508,43 @@ async function extractFreeImagesFromPage(
       }
 
       if (fnId === OPS.paintImageXObject) {
+        imageOpsCount++
         const imageName = args[0] as string
         if (seenImages.has(imageName)) continue
         seenImages.add(imageName)
 
         try {
-          const imgData = await new Promise<{
-            width: number
-            height: number
-            src?: string
-          } | null>((resolve) => {
-            page.objs.get(imageName, (img: unknown) => {
-              resolve(img as { width: number; height: number; src?: string } | null)
-            })
-          })
+          // Use a timeout to prevent hanging on objs.get() - it can wait forever
+          const imgData = await Promise.race([
+            new Promise<{
+              width: number
+              height: number
+              src?: string
+            } | null>((resolve) => {
+              page.objs.get(imageName, (img: unknown) => {
+                resolve(img as { width: number; height: number; src?: string } | null)
+              })
+            }),
+            new Promise<null>((resolve) => setTimeout(() => {
+              console.warn(`[PDF] Page ${pageNum}: timeout getting image "${imageName}", skipping`)
+              resolve(null)
+            }, 2000))
+          ])
 
           if (!imgData) continue
           // Only use images that already have a src (no conversion needed)
-          if (!imgData.src) continue
+          if (!imgData.src) {
+            console.log(`[PDF] Page ${pageNum}: image "${imageName}" has no .src (raw data), skipping`)
+            continue
+          }
           // Skip tiny images (icons, artifacts)
           if (imgData.width < 50 || imgData.height < 50) continue
           // Skip extreme aspect ratios (decorative lines)
           const aspectRatio = imgData.width / imgData.height
           if (aspectRatio > 10 || aspectRatio < 0.1) continue
 
-          // Use transform Y position if available (higher Y = higher on page in PDF coords)
           const yPosition = lastTransform ? lastTransform[5] : 0
+          console.log(`[PDF] Page ${pageNum}: found free image "${imageName}" (${imgData.width}x${imgData.height})`)
 
           images.push({
             src: imgData.src,
@@ -541,13 +553,14 @@ async function extractFreeImagesFromPage(
             pageNum,
             yPosition
           })
-        } catch {
-          // Skip images that fail
+        } catch (e) {
+          console.warn(`[PDF] Page ${pageNum}: error getting image "${imageName}":`, e)
         }
       }
     }
-  } catch {
-    // Skip pages where operator list fails
+    console.log(`[PDF] Page ${pageNum}: ${imageOpsCount} image ops, ${images.length} free images extracted`)
+  } catch (e) {
+    console.warn(`[PDF] Page ${pageNum}: failed to get operator list:`, e)
   }
 
   return images
@@ -637,13 +650,19 @@ export async function extractContentFromPDFProgressive(
   file: File,
   onBatchReady: (content: ContentItem[], text: string, done: boolean, pagesProcessed: number, totalPages: number) => void,
 ): Promise<void> {
+  console.log(`[PDF] Starting progressive extraction for "${file.name}" (${(file.size / 1024 / 1024).toFixed(2)} MB)`)
+  const startTime = performance.now()
+  
   const pdfjsLib = await import('pdfjs-dist')
   pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+  console.log('[PDF] pdf.js loaded, parsing document...')
 
   const arrayBuffer = await file.arrayBuffer()
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
   
   const totalPages = pdf.numPages
+  console.log(`[PDF] Document loaded: ${totalPages} pages`)
+  
   // Send first batch after a few pages so user can start reading quickly
   const FIRST_BATCH_SIZE = Math.min(3, totalPages)
   // After first batch, send updates every N pages
@@ -654,9 +673,11 @@ export async function extractContentFromPDFProgressive(
   let firstBatchSent = false
   
   for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    const pageStart = performance.now()
     const page = await pdf.getPage(pageNum)
     
     // Extract text
+    console.log(`[PDF] Page ${pageNum}/${totalPages}: extracting text...`)
     const textContent = await page.getTextContent()
     const textItems: TextItemWithPosition[] = []
     
@@ -674,6 +695,7 @@ export async function extractContentFromPDFProgressive(
     const filteredItems = filterTextItemsByPosition(textItems)
     const pageText = filteredItems.map(item => item.str).join(' ')
     fullText += pageText + ' '
+    console.log(`[PDF] Page ${pageNum}: text done (${filteredItems.length} items), extracting images...`)
 
     // Extract free images (only .src, no conversion) 
     const freeImages = await extractFreeImagesFromPage(page, pageNum)
@@ -682,23 +704,32 @@ export async function extractContentFromPDFProgressive(
     const pageContent = buildPageContent(filteredItems, freeImages, pageNum)
     allContent = allContent.concat(pageContent)
     
+    const pageTime = (performance.now() - pageStart).toFixed(0)
+    console.log(`[PDF] Page ${pageNum}: complete in ${pageTime}ms (${freeImages.length} images)`)
+    
     // Send first batch early so user can start reading
     if (!firstBatchSent && pageNum >= FIRST_BATCH_SIZE) {
       firstBatchSent = true
+      console.log(`[PDF] Sending first batch (${allContent.length} items from ${pageNum} pages)`)
       onBatchReady([...allContent], fullText.trim(), totalPages <= FIRST_BATCH_SIZE, pageNum, totalPages)
     }
     // Send periodic updates for remaining pages
     else if (firstBatchSent && (pageNum % UPDATE_INTERVAL === 0)) {
+      console.log(`[PDF] Sending update batch (${allContent.length} items from ${pageNum} pages)`)
       onBatchReady([...allContent], fullText.trim(), false, pageNum, totalPages)
     }
   }
   
+  const totalTime = ((performance.now() - startTime) / 1000).toFixed(1)
+  
   // If PDF had fewer pages than FIRST_BATCH_SIZE, send the first (and final) batch now
   if (!firstBatchSent) {
+    console.log(`[PDF] Complete in ${totalTime}s - sending final batch (${allContent.length} items)`)
     onBatchReady([...allContent], fullText.trim(), true, totalPages, totalPages)
     return
   }
   
   // Send final complete batch
+  console.log(`[PDF] Complete in ${totalTime}s - sending final batch (${allContent.length} items)`)
   onBatchReady([...allContent], fullText.trim(), true, totalPages, totalPages)
 }

@@ -212,6 +212,7 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted }: PDF
 
     setIsLoading(true)
     setExtractionProgress('Extracting text...')
+    console.log('[PDFUploader] handleFile called for:', file.name, file.size, file.type)
 
     try {
       const title = file.name.replace('.pdf', '')
