@@ -14,7 +14,7 @@ function getSupabase() {
 // CORS headers for external API consumers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 }
 
@@ -29,6 +29,65 @@ function calculateCostSats(contentSizeBytes: number): number {
   const sizeInMB = contentSizeBytes / (1024 * 1024)
   const cost = Math.ceil(sizeInMB * 100)
   return Math.max(cost, 1)
+}
+
+/**
+ * Create a 402 response with L402 challenge headers
+ */
+async function create402Response(costSats: number, memo: string, contentSizeBytes?: number) {
+  const publishId = randomUUID()
+
+  let paymentRequest: string
+  let paymentHash: string
+
+  try {
+    const result = await createInvoice(costSats, memo, 3600)
+    paymentRequest = result.paymentRequest
+    paymentHash = result.paymentHash
+  } catch (lndError) {
+    console.error('[L402 Publish] LND error:', lndError)
+    return NextResponse.json(
+      { error: 'Payment system not configured. Set LND_REST_HOST and LND_MACAROON_HEX.' },
+      { status: 503, headers: corsHeaders }
+    )
+  }
+
+  const l402Token = createL402Macaroon(publishId, paymentHash, 3600)
+  const challenge = buildL402Challenge(l402Token.macaroon, paymentRequest)
+
+  const sizeInMB = contentSizeBytes
+    ? (contentSizeBytes / (1024 * 1024)).toFixed(3)
+    : '0.000'
+
+  return NextResponse.json(
+    {
+      paymentHash,
+      paymentRequest,
+      macaroon: l402Token.macaroon,
+      publishId,
+      costSats,
+      contentSizeBytes: contentSizeBytes || 0,
+      sizeInMB,
+      message: `Publishing costs ${costSats} sats (100 sats/MB, minimum 1 sat). Pay the invoice and retry with Authorization: L402 <macaroon>:<preimage>`,
+    },
+    {
+      status: 402,
+      headers: {
+        'WWW-Authenticate': challenge,
+        ...corsHeaders,
+      },
+    }
+  )
+}
+
+/**
+ * GET /api/l402/publish
+ * 
+ * L402 discovery endpoint. Always returns 402 with a minimum-cost invoice.
+ * Used by L402 verification systems to confirm this is an L402-gated endpoint.
+ */
+export async function GET() {
+  return create402Response(1, 'SpeedRead publish: L402 discovery')
 }
 
 /**
@@ -57,107 +116,41 @@ function calculateCostSats(contentSizeBytes: number): number {
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { title, textContent, source, priceSats, lightningAddress } = body
-
-    // === Validate required fields ===
-    if (!title || typeof title !== 'string' || !title.trim()) {
-      return NextResponse.json(
-        { error: 'Title is required' },
-        { status: 400, headers: corsHeaders }
-      )
-    }
-
-    if (!textContent || typeof textContent !== 'string' || !textContent.trim()) {
-      return NextResponse.json(
-        { error: 'Text content is required' },
-        { status: 400, headers: corsHeaders }
-      )
-    }
-
-    // Max content: ~1MB
-    const MAX_CONTENT_SIZE = 1_000_000
-    if (textContent.length > MAX_CONTENT_SIZE) {
-      return NextResponse.json(
-        { error: `Content too large. Maximum size is ${Math.floor(MAX_CONTENT_SIZE / 1000)}KB` },
-        { status: 400, headers: corsHeaders }
-      )
-    }
-
-    // Validate paywall settings if specified
-    const isPaid = priceSats && priceSats > 0
-    if (isPaid) {
-      if (!lightningAddress || typeof lightningAddress !== 'string') {
-        return NextResponse.json(
-          { error: 'Lightning Address is required for paid content' },
-          { status: 400, headers: corsHeaders }
-        )
-      }
-      if (!lightningAddress.includes('@') || !lightningAddress.includes('.')) {
-        return NextResponse.json(
-          { error: 'Invalid Lightning Address format (expected user@domain.com)' },
-          { status: 400, headers: corsHeaders }
-        )
-      }
-    }
-
-    // === Calculate cost ===
-    const contentSizeBytes = new TextEncoder().encode(textContent).length
-    const costSats = calculateCostSats(contentSizeBytes)
-    const sizeInMB = (contentSizeBytes / (1024 * 1024)).toFixed(3)
-
-    // === Check for L402 Authorization ===
+    // === Check for L402 Authorization FIRST ===
     const authHeader = request.headers.get('Authorization')
 
-    if (!authHeader) {
-      // ---- No auth: return 402 with invoice ----
-      const publishId = randomUUID()
-
-      let paymentRequest: string
-      let paymentHash: string
-
-      try {
-        const result = await createInvoice(
-          costSats,
-          `SpeedRead publish: "${title.substring(0, 50)}"`,
-          3600 // 1 hour expiry
-        )
-        paymentRequest = result.paymentRequest
-        paymentHash = result.paymentHash
-      } catch (lndError) {
-        console.error('[L402 Publish] LND error:', lndError)
-        return NextResponse.json(
-          { error: 'Payment system not configured. Set LND_REST_HOST and LND_MACAROON_HEX.' },
-          { status: 503, headers: corsHeaders }
-        )
-      }
-
-      // Create L402 token
-      const l402Token = createL402Macaroon(publishId, paymentHash, 3600)
-      const challenge = buildL402Challenge(l402Token.macaroon, paymentRequest)
-
-      return NextResponse.json(
-        {
-          paymentHash,
-          paymentRequest,
-          macaroon: l402Token.macaroon,
-          publishId,
-          costSats,
-          contentSizeBytes,
-          sizeInMB,
-          message: `Publishing costs ${costSats} sats (${sizeInMB} MB × 100 sats/MB). Pay the invoice and retry with Authorization: L402 <macaroon>:<preimage>`,
-        },
-        {
-          status: 402,
-          headers: {
-            'WWW-Authenticate': challenge,
-            ...corsHeaders,
-          },
-        }
-      )
+    // Parse body (may be empty for discovery requests)
+    let body: Record<string, unknown> = {}
+    try {
+      body = await request.json()
+    } catch {
+      // Empty or invalid body — that's OK for discovery
     }
 
-    // ---- Has Authorization: verify payment and create document ----
+    const { title, textContent, source, priceSats, lightningAddress } = body as {
+      title?: string
+      textContent?: string
+      source?: string
+      priceSats?: number
+      lightningAddress?: string
+    }
+
+    // If no Authorization header → always return 402 with invoice
+    if (!authHeader) {
+      // Calculate cost from content if provided, otherwise use minimum
+      const contentSizeBytes = textContent
+        ? new TextEncoder().encode(textContent).length
+        : 0
+      const costSats = contentSizeBytes > 0 ? calculateCostSats(contentSizeBytes) : 1
+      const memo = title
+        ? `SpeedRead publish: "${title.substring(0, 50)}"`
+        : 'SpeedRead publish'
+
+      return create402Response(costSats, memo, contentSizeBytes)
+    }
+
+    // === Has Authorization: verify payment, then validate body, then create document ===
+
     const parsed = parseL402Header(authHeader)
     if (!parsed) {
       return NextResponse.json(
@@ -214,7 +207,49 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // === Payment verified — create the document ===
+    // === Payment verified — NOW validate the body ===
+
+    if (!title || typeof title !== 'string' || !title.trim()) {
+      return NextResponse.json(
+        { error: 'Title is required' },
+        { status: 400, headers: corsHeaders }
+      )
+    }
+
+    if (!textContent || typeof textContent !== 'string' || !textContent.trim()) {
+      return NextResponse.json(
+        { error: 'Text content is required' },
+        { status: 400, headers: corsHeaders }
+      )
+    }
+
+    const MAX_CONTENT_SIZE = 1_000_000
+    if (textContent.length > MAX_CONTENT_SIZE) {
+      return NextResponse.json(
+        { error: `Content too large. Maximum size is ${Math.floor(MAX_CONTENT_SIZE / 1000)}KB` },
+        { status: 400, headers: corsHeaders }
+      )
+    }
+
+    const isPaid = priceSats && priceSats > 0
+    if (isPaid) {
+      if (!lightningAddress || typeof lightningAddress !== 'string') {
+        return NextResponse.json(
+          { error: 'Lightning Address is required for paid content' },
+          { status: 400, headers: corsHeaders }
+        )
+      }
+      if (!lightningAddress.includes('@') || !lightningAddress.includes('.')) {
+        return NextResponse.json(
+          { error: 'Invalid Lightning Address format (expected user@domain.com)' },
+          { status: 400, headers: corsHeaders }
+        )
+      }
+    }
+
+    // === Create the document ===
+    const contentSizeBytes = new TextEncoder().encode(textContent).length
+    const costSats = calculateCostSats(contentSizeBytes)
     const wordCount = textContent.split(/\s+/).filter((w: string) => w.length > 0).length
 
     const { data: document, error: dbError } = await getSupabase()
@@ -226,7 +261,7 @@ export async function POST(request: NextRequest) {
         is_public: true,
         price_sats: isPaid ? priceSats : 0,
         lightning_address: isPaid ? lightningAddress?.trim() : null,
-        creator_name: source ? `From: ${source.substring(0, 100)}` : 'L402 Publish',
+        creator_name: source ? `From: ${(source as string).substring(0, 100)}` : 'L402 Publish',
       })
       .select('id')
       .single()
