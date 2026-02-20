@@ -281,9 +281,13 @@ export default function PDFUploader({ onTextExtracted, onContentExtracted, onAna
       setIsLoading(false)
       setExtractionProgress(null)
 
-      // Send to parent
-      onTextExtracted(words, title, allText)
-      onContentExtracted?.(contentItems, title, allText, true)
+      // Send to parent — use onContentExtracted if available (it also updates words/title),
+      // otherwise fall back to onTextExtracted
+      if (onContentExtracted) {
+        onContentExtracted(contentItems, title, allText, true)
+      } else {
+        onTextExtracted(words, title, allText)
+      }
     } catch (e) {
       console.error('PDF parsing error:', e)
       showToast('Error reading PDF. Please try another file', 'error')

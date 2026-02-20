@@ -103,8 +103,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Sort sections by priority (lower = more important)
-    analysis.sections.sort((a, b) => a.priority - b.priority)
+    // Sort sections by page order (reading order follows the document)
+    analysis.sections.sort((a, b) => a.startPage - b.startPage)
 
     console.log(`[PDF Analyze] "${analysis.title}" - ${analysis.sections.length} sections detected`)
 

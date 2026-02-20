@@ -817,10 +817,10 @@ export function buildContentFromSections(
 ): ContentItem[] {
   const content: ContentItem[] = []
 
-  // Filter out skipped sections, sort by priority
+  // Filter out skipped sections, sort by page order
   const activeSections = analysis.sections
     .filter(s => !s.skip)
-    .sort((a, b) => a.priority - b.priority)
+    .sort((a, b) => a.startPage - b.startPage)
 
   for (const section of activeSections) {
     // Add section divider
