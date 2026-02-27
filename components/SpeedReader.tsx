@@ -463,7 +463,7 @@ export default function SpeedReader({
       )}
 
       {/* Content Display - Word, Image, or Section Title */}
-      <div className="flex-1 flex items-center justify-center w-full">
+      <div className="flex-1 flex items-center justify-center w-full pb-[10vh]">
         {isCurrentSection ? (
           <div className="flex flex-col items-center gap-4 px-6 animate-fade-in">
             <div className="w-12 h-1 bg-[color:var(--accent)] rounded-full" />
@@ -476,10 +476,18 @@ export default function SpeedReader({
           renderImage()
         ) : (
           <div 
-            className="w-full max-w-4xl px-4 text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-normal tracking-wide"
+            className="relative w-full max-w-4xl px-4 text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-normal tracking-wide"
             style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif' }}
           >
+            {/* Top guide line */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-screen h-px pointer-events-none" style={{ background: 'var(--guide)' }}>
+              <div className="absolute top-0 left-1/2 w-px h-6" style={{ background: 'var(--guide)' }} />
+            </div>
             {renderWord()}
+            {/* Bottom guide line */}
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-screen h-px pointer-events-none" style={{ background: 'var(--guide)' }}>
+              <div className="absolute bottom-0 left-1/2 w-px h-6" style={{ background: 'var(--guide)' }} />
+            </div>
           </div>
         )}
       </div>
