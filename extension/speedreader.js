@@ -157,6 +157,8 @@ class SpeedReader {
         
         <!-- Word display -->
         <div class="speedread-word-container">
+          <div class="speedread-guide-top"></div>
+          <div class="speedread-guide-bottom"></div>
           <div class="speedread-word"></div>
           <div class="speedread-fade-left"></div>
           <div class="speedread-fade-right"></div>

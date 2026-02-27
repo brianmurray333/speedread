@@ -12,6 +12,7 @@
   --sr-muted: #6B6B6B;
   --sr-progress-bg: #E5E3DC;
   --sr-progress-fill: #F7931A;
+  --sr-guide: rgba(0, 0, 0, 0.18);
 }
 
 .speedread-reader.dark {
@@ -25,6 +26,7 @@
   --sr-muted: #9A9A9A;
   --sr-progress-bg: #3A3A3A;
   --sr-progress-fill: #F7931A;
+  --sr-guide: rgba(255, 255, 255, 0.2);
 }
 
 /* Overlay container */
@@ -52,6 +54,7 @@
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
+  padding-bottom: 10vh !important;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif !important;
   color: var(--sr-foreground) !important;
   transition: background-color 0.3s ease, color 0.3s ease !important;
@@ -414,6 +417,45 @@
 
 .speedread-invisible {
   visibility: hidden !important;
+}
+
+/* Focus guide lines — anchoring lines above/below the word */
+.speedread-guide-top,
+.speedread-guide-bottom {
+  position: absolute !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: 100vw !important;
+  height: 1px !important;
+  background: var(--sr-guide) !important;
+  pointer-events: none !important;
+}
+
+.speedread-guide-top {
+  top: 0 !important;
+}
+
+.speedread-guide-bottom {
+  bottom: 0 !important;
+}
+
+.speedread-guide-top::after,
+.speedread-guide-bottom::after {
+  content: '' !important;
+  position: absolute !important;
+  left: 50% !important;
+  width: 1px !important;
+  background: var(--sr-guide) !important;
+}
+
+.speedread-guide-top::after {
+  top: 0 !important;
+  height: 24px !important;
+}
+
+.speedread-guide-bottom::after {
+  bottom: 0 !important;
+  height: 24px !important;
 }
 
 /* Fade masks - hidden since we're not clipping anymore */
