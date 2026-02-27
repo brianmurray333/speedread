@@ -423,20 +423,19 @@
 .speedread-guide-top,
 .speedread-guide-bottom {
   position: absolute !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  width: 100vw !important;
+  left: calc(-50vw + 50%) !important;
+  right: calc(-50vw + 50%) !important;
   height: 1px !important;
   background: var(--sr-guide) !important;
   pointer-events: none !important;
 }
 
 .speedread-guide-top {
-  top: 0 !important;
+  top: -1.5rem !important;
 }
 
 .speedread-guide-bottom {
-  bottom: 0 !important;
+  bottom: -1.5rem !important;
 }
 
 .speedread-guide-top::after,
@@ -445,17 +444,16 @@
   position: absolute !important;
   left: 50% !important;
   width: 1px !important;
+  height: 1rem !important;
   background: var(--sr-guide) !important;
 }
 
 .speedread-guide-top::after {
   top: 0 !important;
-  height: 24px !important;
 }
 
 .speedread-guide-bottom::after {
   bottom: 0 !important;
-  height: 24px !important;
 }
 
 /* Fade masks - hidden since we're not clipping anymore */

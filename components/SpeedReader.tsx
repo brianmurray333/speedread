@@ -480,13 +480,19 @@ export default function SpeedReader({
             style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif' }}
           >
             {/* Top guide line */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-screen h-px pointer-events-none" style={{ background: 'var(--guide)' }}>
-              <div className="absolute top-0 left-1/2 w-px h-6" style={{ background: 'var(--guide)' }} />
+            <div
+              className="absolute h-px pointer-events-none"
+              style={{ top: '-1.5rem', left: 'calc(-50vw + 50%)', right: 'calc(-50vw + 50%)', background: 'var(--guide)' }}
+            >
+              <div className="absolute left-1/2 w-px" style={{ top: 0, height: '1rem', background: 'var(--guide)' }} />
             </div>
             {renderWord()}
             {/* Bottom guide line */}
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-screen h-px pointer-events-none" style={{ background: 'var(--guide)' }}>
-              <div className="absolute bottom-0 left-1/2 w-px h-6" style={{ background: 'var(--guide)' }} />
+            <div
+              className="absolute h-px pointer-events-none"
+              style={{ bottom: '-1.5rem', left: 'calc(-50vw + 50%)', right: 'calc(-50vw + 50%)', background: 'var(--guide)' }}
+            >
+              <div className="absolute left-1/2 w-px" style={{ bottom: 0, height: '1rem', background: 'var(--guide)' }} />
             </div>
           </div>
         )}
