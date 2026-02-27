@@ -12,7 +12,7 @@
   --muted: #6B6B6B;
   --progress-bg: #E5E3DC;
   --progress-fill: #F7931A;
-  --guide: rgba(0, 0, 0, 0.18);
+  --guide: rgba(0, 0, 0, 0.1);
 }
 
 .dark {
@@ -27,7 +27,7 @@
   --muted: #9A9A9A;
   --progress-bg: #3A3A3A;
   --progress-fill: #F7931A;
-  --guide: rgba(255, 255, 255, 0.2);
+  --guide: rgba(255, 255, 255, 0.12);
 }
 
 @theme inline {
